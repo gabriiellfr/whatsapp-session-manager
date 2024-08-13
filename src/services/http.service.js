@@ -12,16 +12,6 @@ const handleResponse = (promise) => {
                     status: error.response.status,
                     headers: error.response.headers,
                 });
-            } else if (error.request) {
-                return Promise.reject({
-                    message: 'No response received',
-                    request: error.request,
-                });
-            } else {
-                return Promise.reject({
-                    message: 'Error setting up the request',
-                    error: error.message,
-                });
             }
         });
 };
