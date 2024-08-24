@@ -1,8 +1,9 @@
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const morgan = require('morgan');
 
-const { startWhatsAppMicroservice } = require('../../services/session.service');
+const sessionRoutes = require('../../routes/session.router');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -14,9 +15,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+app.use(morgan('dev'));
+
 // enable cors
 const corsOptions = {
-    origin: ['http://localhost:3001'],
+    origin: ['http://localhost:3000', 'http://localhost:3001'],
     credentials: true,
     methods: ['POST'],
     allowedHeaders: [
@@ -30,20 +33,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors());
 
-app.post('/start', (req, res) => {
-    const { sessionId } = req.body;
-
-    if (!sessionId)
-        return res.status(400).json({ error: 'Session ID is required' });
-
-    try {
-        startWhatsAppMicroservice(sessionId);
-        res.status(200).json({
-            message: `WhatsApp session ${sessionId} started successfully.`,
-        });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to start WhatsApp session' });
-    }
-});
+app.use('/', sessionRoutes);
 
 module.exports = httpServer;

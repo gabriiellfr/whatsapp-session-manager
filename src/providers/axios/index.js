@@ -1,7 +1,9 @@
 const axiosInstance = require('axios');
 
+const { webHookURL } = require('../../config');
+
 const axios = axiosInstance.create({
-    baseURL: 'http://localhost:3000/webhook',
+    baseURL: webHookURL,
     timeout: 5000,
     headers: {
         'Content-Type': 'application/json',
