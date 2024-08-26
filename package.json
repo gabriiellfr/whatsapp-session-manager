@@ -4,7 +4,8 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "dev": "nodemon ./src/server.js"
+        "dev": "nodemon ./src/server.js",
+        "build": "babel src -d build"
     },
     "keywords": [],
     "author": "",
@@ -20,5 +21,10 @@
         "uuid": "^10.0.0",
         "whatsapp-web.js": "github:bymarcelo/whatsapp-web.js#fix-remote-auth-unzip",
         "winston": "^3.14.0"
+    },
+    "devDependencies": {
+        "@babel/cli": "^7.24.8",
+        "@babel/core": "^7.25.2",
+        "@babel/preset-env": "^7.25.4"
     }
 }
