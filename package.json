@@ -20,7 +20,7 @@
         "qrcode": "^1.5.4",
         "tree-kill": "^1.2.2",
         "uuid": "^10.0.0",
-        "whatsapp-web.js": "github:bymarcelo/whatsapp-web.js#fix-remote-auth-unzip",
+        "whatsapp-web.js": "^1.25.0",
         "winston": "^3.14.0"
     },
     "devDependencies": {
