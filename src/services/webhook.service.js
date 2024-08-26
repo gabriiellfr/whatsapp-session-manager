@@ -1,12 +1,9 @@
 const { httpService } = require('./http.service');
 
-async function sendEvent(sessionId, type, data) {
+async function sendEvent(type, data) {
     try {
-        await httpService.post(`/${sessionId}/${type}`, data);
+        await httpService.post(`/${data.sessionId}/${type}`, data);
     } catch (error) {
-        console.error(
-            `Failed to send message to backend for session ${sessionId}:`,
-        );
         throw error;
     }
 }

@@ -4,7 +4,7 @@ const { webHookURL } = require('../../config');
 
 const axios = axiosInstance.create({
     baseURL: webHookURL,
-    timeout: 5000,
+    timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
     },

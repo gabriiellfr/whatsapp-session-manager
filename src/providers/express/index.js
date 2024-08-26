@@ -8,16 +8,13 @@ const sessionRoutes = require('../../routes/session.router');
 const app = express();
 const httpServer = http.createServer(app);
 
-// parse json request body
 app.use(express.json());
 
-// Parse incoming request bodies
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.use(morgan('dev'));
 
-// enable cors
 const corsOptions = {
     origin: ['http://localhost:3000', 'http://localhost:3001'],
     credentials: true,
@@ -34,5 +31,11 @@ app.use(cors(corsOptions));
 app.options('*', cors());
 
 app.use('/', sessionRoutes);
+
+app.use('*', (req, res) => {
+    return res.status(404).json({
+        error: "API endpoint doesn't exist",
+    });
+});
 
 module.exports = httpServer;

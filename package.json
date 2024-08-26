@@ -16,6 +16,7 @@
         "express": "^4.19.2",
         "morgan": "^1.10.0",
         "qrcode": "^1.5.4",
+        "tree-kill": "^1.2.2",
         "uuid": "^10.0.0",
         "whatsapp-web.js": "github:bymarcelo/whatsapp-web.js#fix-remote-auth-unzip",
         "winston": "^3.14.0"

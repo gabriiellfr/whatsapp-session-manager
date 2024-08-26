@@ -1,26 +1,34 @@
 const { spawn } = require('child_process');
+const kill = require('tree-kill');
 const path = require('path');
 
 const { sendEvent } = require('./webhook.service');
 
+const sendEventWithHandling = async (type, data) => {
+    try {
+        await sendEvent(type, data);
+    } catch (error) {
+        console.error(
+            `Failed to send event for session ${data.sessionId}:`,
+            error,
+        );
+    }
+};
+
 const processes = new Map();
 
-// Start a new session if not already running
 const startSession = (sessionId) => {
     return new Promise((resolve, reject) => {
-        // Check if the session is already running
         const existingProcess = processes.get(sessionId);
         if (
             existingProcess &&
             existingProcess.process &&
-            !existingProcess.process.killed
+            !existingProcess.process.killed &&
+            existingProcess.childStatus.status !== 'stopped'
         ) {
-            return reject(
-                new Error(`Session ${sessionId} is already running.`),
-            );
+            return resolve(`Session ${sessionId} is already running.`);
         }
 
-        // Start a new session
         const child = spawn(
             'node',
             [path.join(__dirname, '../session/index.js')],
@@ -41,106 +49,97 @@ const startSession = (sessionId) => {
                 startTime: new Date().toISOString(),
                 lastUpdate: new Date().toISOString(),
             });
+
+            /*
+            setTimeout(() => {
+                const proc = processes.get(sessionId);
+
+                console.log('KILL IT', proc.process.pid);
+
+                kill(proc.process.pid, 'SIGKILL');
+            }, 20000);
+
             resolve();
+
+            */
         });
 
-        child.on('message', (message) =>
-            handleChildMessage(sessionId, message),
-        );
+        child.on('message', (message) => handleChildMessage(message));
 
         ['exit', 'SIGINT', 'SIGTERM', 'SIGQUIT'].forEach((signal) =>
-            child.on(signal, () => {
+            child.on(signal, async () => {
+                console.log("'exit', 'SIGINT', 'SIGTERM', 'SIGQUIT'");
                 const proc = processes.get(sessionId);
+
                 if (proc) {
-                    processes.set(sessionId, {
+                    const updatedProcess = {
                         ...proc,
-                        childStatus: { status: 'stopped' },
                         lastUpdate: new Date().toISOString(),
-                    });
+                        type: 'status',
+                    };
+
+                    updatedProcess.childStatus = { status: 'stopped' };
+                    updatedProcess.sessionStatus = {
+                        status: 'stopped',
+                        message: 'Session is no longer running',
+                    };
+
+                    const {
+                        process: _,
+                        heartbeat: __,
+                        ...newObject
+                    } = updatedProcess;
+
+                    //await sendEventWithHandling('status_update', newObject);
                 }
             }),
         );
     });
 };
 
-// Handle messages from child processes
-const handleChildMessage = (sessionId, message) => {
-    const proc = processes.get(sessionId);
-    if (!proc) return;
+const handleChildMessage = (message) => {
+    const child = processes.get(message.sessionId);
 
-    const { type, category, data, timestamp } = message;
+    if (!child) return;
 
-    switch (type) {
+    switch (message.type) {
         case 'status_update':
-            handleStatusUpdate(sessionId, category, data, timestamp);
+            handleStatusUpdate(message);
             break;
 
         case 'incoming_message':
-            handleIncomingMessage(sessionId, data);
+            handleIncomingMessage(message);
             break;
 
         default:
             console.warn(
-                `Unknown message type from session ${sessionId}: ${type}`,
+                `Unknown message type from session ${message.sessionId}: ${type}`,
             );
             break;
     }
 };
 
-// Handle status updates
-const handleStatusUpdate = (sessionId, category, data, timestamp) => {
-    const proc = processes.get(sessionId);
-    if (!proc) return;
-
-    const updatedProcess = { ...proc, lastUpdate: timestamp };
-
-    switch (category) {
-        case 'child_process':
-            updatedProcess.childStatus = { ...data };
-            break;
-
-        case 'whatsapp_session':
-            const { status, ...sessionStatusData } = data;
-            updatedProcess.sessionStatus =
-                status === 'qr'
-                    ? { ...data }
-                    : { status, ...sessionStatusData };
-            break;
-
-        case 'heartbeat':
-            break;
-
-        default:
-            console.warn(
-                `Unknown status category from session ${sessionId}: ${category}`,
-            );
-            break;
-    }
-
-    processes.set(sessionId, updatedProcess);
-
-    const { process: _, heartbeat: __, ...newObject } = updatedProcess;
-    sendEvent(sessionId, 'status', newObject);
+const handleStatusUpdate = async (status) => {
+    await sendEventWithHandling('status', status);
 };
 
-// Handle incoming messages
-const handleIncomingMessage = (sessionId, messageData) => {
-    sendEvent(sessionId, 'data', {
-        type: 'incoming_message',
-        sessionId,
-        data: messageData,
-    });
+const handleIncomingMessage = async (message) => {
+    await sendEventWithHandling('incoming_message', message);
 };
 
-// Stop an existing session
 const stopSession = (sessionId) => {
     return new Promise((resolve, reject) => {
-        const proc = processes.get(sessionId);
+        const existingProcess = processes.get(sessionId);
 
-        if (proc && proc.process && !proc.process.killed) {
-            proc.process.kill();
+        if (
+            existingProcess &&
+            existingProcess.process &&
+            !existingProcess.process.killed
+        ) {
+            kill(existingProcess.process.pid, 'SIGKILL');
+
             processes.set(sessionId, {
-                ...proc,
+                ...existingProcess,
                 childStatus: { status: 'stopped' },
                 lastUpdate: new Date().toISOString(),
             });
@@ -155,7 +154,25 @@ const stopSession = (sessionId) => {
     });
 };
 
-// List all sessions
+const sendSessions = (sessionId, type, data) => {
+    const { to, content } = data;
+
+    const existingProcess = processes.get(sessionId);
+
+    if (
+        existingProcess &&
+        existingProcess.process &&
+        !existingProcess.process.killed
+    ) {
+        existingProcess.process.send({
+            type,
+            data: { to, content },
+        });
+    } else {
+        console.error(`Session ${sessionId} is not running or does not exist.`);
+    }
+};
+
 const listSessions = () => {
     return Array.from(processes.entries()).map(([id, info]) => {
         const { process, ...rest } = info;
@@ -163,7 +180,6 @@ const listSessions = () => {
     });
 };
 
-// Graceful shutdown: terminate all processes
 const shutdown = () => {
     processes.forEach(({ process }) => {
         if (process && !process.killed) {
@@ -173,7 +189,6 @@ const shutdown = () => {
     process.exit();
 };
 
-// Handle various termination signals to ensure cleanup
 process.on('exit', shutdown);
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
@@ -181,9 +196,14 @@ process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
     shutdown();
 });
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection:', reason);
+    shutdown();
+});
 
 module.exports = {
     startSession,
     stopSession,
+    sendSessions,
     listSessions,
 };

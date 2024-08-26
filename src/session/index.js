@@ -1,109 +1,205 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 
-const SESSION_ID = process.env.SESSION_ID || 'default_session';
-const HEARTBEAT_INTERVAL = 10000;
+const { v4: uuidv4 } = require('uuid');
 
-const notifyParent = (type, category, data = {}) => {
-    process.send({
-        type,
-        category,
-        sessionId: SESSION_ID,
-        data,
-        timestamp: new Date().toISOString(),
-    });
-};
+class WhatsAppManager {
+    constructor(sessionId = 'default_session', heartbeatInterval = 5000) {
+        this.SESSION_ID = sessionId;
+        this.HEARTBEAT_INTERVAL = heartbeatInterval;
 
-const updateWhatsAppStatus = (status, extraDetails = {}) => {
-    notifyParent('status_update', 'whatsapp_session', {
-        status,
-        ...extraDetails,
-    });
-};
+        this.client = null;
+        this.clientInfo = null;
+        this.heartbeatTimer = null;
+        this.isReconnecting = false;
 
-const sendHeartbeat = () => {
-    notifyParent('status_update', 'heartbeat', {
-        message: 'Client heartbeat check.',
-    });
-};
-
-const handleIncomingMessage = (eventType, payload) => {
-    notifyParent('incoming_message', 'message', { eventType, payload });
-};
-
-const generateQRCode = async (qr) => {
-    try {
-        const qrUrl = await qrcode.toDataURL(qr);
-        updateWhatsAppStatus('qr', { qrUrl });
-    } catch (err) {
-        updateWhatsAppStatus('qr_error', { message: err.toString() });
+        this.status = this.createStatus('initializing');
     }
-};
 
-const initializeClient = async () => {
-    const client = new Client({
-        takeoverOnConflict: true,
-        restartOnAuthFail: true,
-        puppeteer: {
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu',
-            ],
-        },
-        authStrategy: new LocalAuth({
-            dataPath: 'local_store',
-            clientId: SESSION_ID,
-        }),
-    });
-
-    client.on('qr', (qr) => {
-        generateQRCode(qr);
-    });
-
-    client.on('ready', () => {
-        updateWhatsAppStatus('ready', {
-            message: 'WhatsApp session is ready.',
-        });
-    });
-
-    client.on('authenticated', () => {
-        updateWhatsAppStatus('authenticated', {
-            message: 'WhatsApp session is authenticated.',
-        });
-    });
-
-    client.on('message', (message) => {
-        handleIncomingMessage('message', message);
-    });
-
-    client.on('message_create', (message) => {
-        handleIncomingMessage('message_create', message);
-    });
-
-    client.on('disconnected', (reason) => {
-        updateWhatsAppStatus('disconnected', { reason });
-    });
-
-    try {
-        await client.initialize();
-    } catch (error) {
-        updateWhatsAppStatus('error', {
-            message: error.toString(),
-        });
-
-        process.exit();
+    createStatus(connectionStatus, extraData = {}) {
+        return {
+            isConnected: connectionStatus === 'ready',
+            clientInfo: this.clientInfo,
+            status: connectionStatus,
+            statusInfo: extraData,
+        };
     }
-};
 
-initializeClient();
+    updateStatus(connectionStatus, extraData = {}) {
+        this.status = this.createStatus(connectionStatus, extraData);
+        this.notifyParent('status_update', this.status);
+    }
 
-// Send a heartbeat every 10 seconds
-setInterval(() => {
-    sendHeartbeat();
-}, HEARTBEAT_INTERVAL);
+    createMessage(message) {
+        return { ...message };
+    }
+
+    async initialize() {
+        this.client = new Client({
+            puppeteer: {
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--disable-extensions',
+                    '--disable-component-extensions-with-background-pages',
+                    '--disable-default-apps',
+                    '--mute-audio',
+                    '--no-default-browser-check',
+                    '--autoplay-policy=no-user-gesture-required',
+                    '--disable-features=TranslateUI',
+                    '--disable-notifications',
+                    '--disable-ipc-flooding-protection',
+                    '--js-flags=--expose-gc,--max-old-space-size=512',
+                    '--no-zygote',
+                ],
+                defaultViewport: { width: 800, height: 600 },
+                ignoreHTTPSErrors: true,
+            },
+            authStrategy: new LocalAuth({
+                dataPath: 'local_store',
+                clientId: this.SESSION_ID,
+            }),
+        });
+
+        this.setupEventListeners();
+        this.startHeartbeat();
+
+        try {
+            await this.client.initialize();
+        } catch (error) {
+            this.handleError('initialization_error', error);
+            await this.reconnect();
+        }
+    }
+
+    setupEventListeners() {
+        this.client.on('qr', (qr) => this.handleQR(qr));
+        this.client.on('auth_failure', (msg) => this.handleAuthFailure(msg));
+        this.client.on('ready', () => this.handleReady());
+        this.client.on('authenticated', () => this.handleAuthenticated());
+        this.client.on('message', (message) => this.handleMessage(message));
+        this.client.on('message_create', (message) =>
+            this.handleMessage(message),
+        );
+        this.client.on('disconnected', () => this.handleDisconnected());
+        this.client.on('error', (error) =>
+            this.handleError('client_error', error),
+        );
+
+        process.on('message', (message) => this.handleParentMessage(message));
+    }
+
+    async handleQR(qr) {
+        try {
+            const qrUrl = await qrcode.toDataURL(qr);
+            this.updateStatus('qr_ready', { qrUrl });
+        } catch (error) {
+            this.handleError('qr_generation_error', error);
+        }
+    }
+
+    handleAuthFailure(msg) {
+        this.updateStatus('auth_failure', { message: msg.toString() });
+    }
+
+    handleReady() {
+        this.clientInfo = this.client.info;
+        this.updateStatus('ready');
+    }
+
+    handleAuthenticated() {
+        this.updateStatus('authenticated');
+    }
+
+    handleMessage(message) {
+        const { fromMe, from, to, timestamp, body, ack, type } = message;
+
+        const messageId = uuidv4();
+
+        this.notifyParent(
+            'incoming_message',
+            this.createMessage({
+                id: messageId,
+                fromMe,
+                from,
+                to,
+                timestamp,
+                body,
+                ack,
+                type,
+            }),
+        );
+    }
+
+    handleDisconnected() {
+        this.clientInfo = null;
+
+        this.updateStatus('disconnected');
+
+        this.reconnect();
+    }
+
+    handleError(event, error) {
+        this.updateStatus('error', {
+            event,
+            error: error.toString(),
+        });
+    }
+
+    async handleParentMessage(message) {
+        if (message.type === 'send_message') {
+            const { to, content } = message.data;
+
+            try {
+                await this.client.sendMessage(to, content);
+            } catch (error) {
+                this.handleError('message_send_error', error);
+            }
+        }
+    }
+
+    notifyParent(type, data = {}) {
+        process.send({
+            type,
+            data,
+            sessionId: this.SESSION_ID,
+            timestamp: new Date().toISOString(),
+        });
+    }
+
+    startHeartbeat() {
+        this.heartbeatTimer = setInterval(() => {
+            if (!this.isReconnecting) {
+                this.notifyParent('status_update', this.status);
+            }
+        }, this.HEARTBEAT_INTERVAL);
+    }
+
+    stopHeartbeat() {
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+        }
+    }
+
+    async reconnect() {
+        console.log('Attempting to reconnect...');
+        this.isReconnecting = true;
+        this.stopHeartbeat();
+
+        this.updateStatus('reconnecting');
+
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait for 5 seconds
+        await this.client.initialize();
+
+        this.isReconnecting = false;
+        this.startHeartbeat();
+    }
+}
+
+const manager = new WhatsAppManager(process.env.SESSION_ID);
+manager.initialize();

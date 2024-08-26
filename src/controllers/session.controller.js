@@ -25,12 +25,21 @@ const stopSession = async (req, res) => {
 
     try {
         await sessionService.stopSession(sessionId);
+
         res.status(200).json({
             message: `WhatsApp session ${sessionId} stopped successfully.`,
         });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
+};
+
+const sendSession = async (req, res) => {
+    const { sessionId, type, data } = req.body;
+
+    await sessionService.sendSessions(sessionId, type, data);
+
+    res.send();
 };
 
 const listSessions = async (req, res) => {
@@ -42,5 +51,6 @@ const listSessions = async (req, res) => {
 module.exports = {
     startSession,
     stopSession,
+    sendSession,
     listSessions,
 };
