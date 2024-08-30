@@ -5,7 +5,7 @@ const morgan = require('morgan');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
-const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS.split(',');
+const { allowedOrigins } = require('../../config');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -23,7 +23,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 const corsOptions = {
-    origin: allowedOrigins,
+    origin: allowedOrigins.split(','),
     credentials: true,
     methods: ['GET,HEAD,PUT,PATCH,POST,DELETE'],
     allowedHeaders: [
