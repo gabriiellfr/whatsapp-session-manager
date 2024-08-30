@@ -5,8 +5,6 @@ const morgan = require('morgan');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
-const sessionRoutes = require('../../routes/session.router');
-
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS.split(',');
 
 const app = express();
@@ -38,8 +36,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('*', cors());
-
-app.use('/', sessionRoutes);
 
 app.use('*', (req, res) => {
     return res.status(404).json({

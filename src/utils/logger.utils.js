@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const winston = require('winston');
+
 const config = require('../config');
 
 // Create the logs directory if it doesn't exist

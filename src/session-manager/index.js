@@ -2,8 +2,9 @@ const { spawn } = require('child_process');
 const path = require('path');
 const kill = require('tree-kill');
 
-const logger = require('../utils/logger');
 const config = require('../config');
+
+const { logger } = require('../utils');
 
 const sessions = new Map();
 

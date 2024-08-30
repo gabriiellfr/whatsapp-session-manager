@@ -150,15 +150,44 @@ class WhatsAppManager {
         });
     }
 
-    async handleParentMessage(message) {
-        if (this.status.isConnected && message.type === 'send_message') {
-            const { to, content } = message.data;
+    async handleParentMessage(parentMessage) {
+        switch (parentMessage.type) {
+            case 'send_message':
+                this.handleSendMessage(parentMessage);
+                break;
 
-            try {
-                await this.client.sendMessage(to, content);
-            } catch (error) {
-                this.handleError('message_send_error', error);
+            case 'send_messages':
+                this.handleSendMessage(parentMessage);
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    async handleSendMessage(message) {
+        if (!this.status.isConnected) return;
+
+        const { to, content } = message.data;
+
+        try {
+            await this.client.sendMessage(to, content);
+        } catch (error) {
+            this.handleError('message_send_error', error);
+        }
+    }
+
+    async handleSendMessages(message) {
+        if (!this.status.isConnected) return;
+
+        const { to, content } = message.data;
+
+        try {
+            for (const dest of to) {
+                await this.client.sendMessage(dest, content);
             }
+        } catch (error) {
+            this.handleError('messages_send_error', error);
         }
     }
 

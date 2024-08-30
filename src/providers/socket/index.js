@@ -1,11 +1,10 @@
 const socketIo = require('socket.io');
 
-const authMiddleware = require('../../middlewares/socket.middleware');
+const { socketMiddleware } = require('../../middlewares/');
 
-const adminHandler = require('../../handlers/admin.handler');
-const userHandler = require('../../handlers/user.handler');
+const { adminHandler, userHandler } = require('../../handlers');
 
-const logger = require('../../utils/logger');
+const { logger } = require('../../utils');
 
 const setup = (server) => {
     logger.info(`Starting socket server`);
@@ -16,7 +15,7 @@ const setup = (server) => {
         },
     });
 
-    authMiddleware(io);
+    socketMiddleware(io);
 
     io.on('connection', (socket) => {
         if (!socket.user) {

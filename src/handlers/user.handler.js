@@ -1,22 +1,39 @@
-const { sessions, stopSession, startSession } = require('../manager');
+const { sessions, startSession, stopSession } = require('../session-manager');
 
-const logger = require('../utils/logger');
+const { logger } = require('../utils');
 
 const userHandler = (io, socket) => {
-    const sessionId = socket.handshake.query.sessionId;
+    socket.on('joinSession', async (data) => {
+        const { sessionId } = JSON.parse(data);
 
-    if (!sessionId) {
-        socket.emit('error', { message: 'No session id provided!' });
-        return;
-    }
+        if (!sessionId) {
+            socket.emit('error', { message: 'No session id provided!' });
+            return;
+        }
 
-    socket.join(sessionId);
+        socket.join(sessionId);
+    });
 
-    socket.on('startSession', async () => {
+    socket.on('startSession', async (data) => {
+        const { sessionId } = JSON.parse(data);
+
+        if (!sessionId) {
+            socket.emit('error', { message: 'No session id provided!' });
+            return;
+        }
+
+        socket.join(sessionId);
         await startSession(sessionId, socket, io);
     });
 
-    socket.on('stopSession', async () => {
+    socket.on('stopSession', async (data) => {
+        const { sessionId } = JSON.parse(data);
+
+        if (!sessionId) {
+            socket.emit('error', { message: 'No session id provided!' });
+            return;
+        }
+
         if (sessions.has(sessionId)) {
             await stopSession(sessionId, io);
         } else {
@@ -24,7 +41,14 @@ const userHandler = (io, socket) => {
         }
     });
 
-    socket.on('getLogs', async () => {
+    socket.on('getLogs', async (data) => {
+        const { sessionId } = JSON.parse(data);
+
+        if (!sessionId) {
+            socket.emit('error', { message: 'No session id provided!' });
+            return;
+        }
+
         if (sessions.has(sessionId)) {
             const { logs } = sessions.get(sessionId);
             socket.emit('sessionLogs', { sessionId, logs });
@@ -33,11 +57,23 @@ const userHandler = (io, socket) => {
         }
     });
 
-    socket.on('executeCommand', async (command) => {
+    socket.on('sendToSession', async (data) => {
+        const { sessionId, type, content } = JSON.parse(data);
+
+        if (!sessionId) {
+            socket.emit('error', { message: 'No session id provided!' });
+            return;
+        }
+
+        if (!type || !content) return;
+
         if (sessions.has(sessionId)) {
             const { process } = sessions.get(sessionId);
-            process.send({ type: 'command', command });
-            logger.info(`Command executed in session ${sessionId}: ${command}`);
+            process.send({ type, data: content });
+            logger.info(
+                `Command executed in session ${sessionId}: ${type}`,
+                content
+            );
         } else {
             socket.emit('error', { message: 'Session not found' });
         }

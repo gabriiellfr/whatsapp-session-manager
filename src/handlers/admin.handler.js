@@ -1,4 +1,4 @@
-const { sessions, stopSession } = require('../manager/index');
+const { sessions, stopSession } = require('../session-manager');
 
 const adminHandler = (io, socket) => {
     socket.on('getAllSessions', () => {
