@@ -31,7 +31,7 @@ const readyHandle = (sessionId) => {
             },
         });
     } catch (err) {
-        logger.info(`Error on ready event.`);
+        logger.info(`Error on ready event: ${err}`);
     }
 };
 
@@ -46,7 +46,7 @@ const authenticatedHandler = (sessionId) => {
             },
         });
     } catch (err) {
-        logger.info(`Error on authenticated event.`);
+        logger.info(`Error on authenticated event: ${err}`);
     }
 };
 
@@ -66,7 +66,7 @@ const messageHandler = (message, sessionId) => {
             },
         });
     } catch (err) {
-        logger.info(`Error on message event.`);
+        logger.info(`Error on message event: ${err}`);
     }
 };
 
@@ -86,7 +86,7 @@ const messageCreateHandler = (message, sessionId) => {
             },
         });
     } catch (err) {
-        logger.info(`Error on messageCreate event.`);
+        logger.info(`Error on messageCreate event: ${err}`);
     }
 };
 

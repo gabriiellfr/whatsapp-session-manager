@@ -2,24 +2,17 @@ const { axios } = require('../providers/axios');
 
 const handleResponse = (promise) => {
     return promise
-        .then((response) => {
-            return { data: response.data, status: response.status };
+        .then(() => {
+            return {
+                success: true,
+                message: null,
+            };
         })
         .catch((error) => {
-            if (error.response) {
-                // Handle known response errors
-                return Promise.reject({
-                    data: error.response.data,
-                    status: error.response.status,
-                    headers: error.response.headers,
-                });
-            } else if (error.request) {
-                return Promise.reject(
-                    new Error('No response received from server.'),
-                );
-            } else {
-                return Promise.reject(new Error(error.message));
-            }
+            return {
+                success: false,
+                message: error,
+            };
         });
 };
 

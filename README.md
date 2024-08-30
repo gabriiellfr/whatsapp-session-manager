@@ -25,3 +25,34 @@
     "sessionId": "your_session_id"
 }
 ```
+
+```txt
+
++-----------------+          +----------------+          +-----------------------------+
+|    Frontend     |  <-----> |  Backend (API) |  <-----> |  WhatsApp Session Manager    |
+|    (React)      |          |  (Express)     |          |  (Express & whatsapp-web.js) |
+|                 |          |                |          |  [Chromium Instances]        |
++-----------------+          +----------------+          +-----------------------------+
+        ^                             ^                              ^
+        |                             |                              |
+        |                             |                              |
+        |      User Requests          |                              |
+        +---------------------------> |                              |
+                                      |                              |
+                                      |                              |
+                                      +----------------------------->|
+                                      |   Session Management         |
+                                      |   (e.g., spawn new process)  |
+                                      |                              |
+                                      |                              |
+                                      |                              v
+                                      |                  +----------------------------+
+                                      |                  |  New WhatsApp Session      |
+                                      |                  |  (Chromium Instance)       |
+                                      |                  +----------------------------+
+                                      |
+                                      |
+                                      +<----------------------------------------------+
+                                            Status updates, logs, and message handling
+
+```

@@ -5,3 +5,5 @@
 package-lock.json
 /local_store
 /logs
+/build
+.env

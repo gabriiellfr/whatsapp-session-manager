@@ -1,6 +1,9 @@
-const httpServer = require('./providers/express');
+require('dotenv').config();
 
-const { port } = require('./config');
+const httpServer = require('./providers/express');
+const socket = require('./providers/socket');
+
+const port = process.env.PORT || 3000;
 
 const startServer = async () => {
     httpServer.listen(port, () => {
@@ -11,6 +14,8 @@ const startServer = async () => {
         console.log('|                                       |');
         console.log('\x1b[37m+---------------------------------------+');
     });
+
+    socket.setup(httpServer);
 };
 
 startServer().catch((err) => {

@@ -83,11 +83,11 @@ class WhatsAppManager {
         this.client.on('authenticated', () => this.handleAuthenticated());
         this.client.on('message', (message) => this.handleMessage(message));
         this.client.on('message_create', (message) =>
-            this.handleMessage(message),
+            this.handleMessage(message)
         );
         this.client.on('disconnected', () => this.handleDisconnected());
         this.client.on('error', (error) =>
-            this.handleError('client_error', error),
+            this.handleError('client_error', error)
         );
 
         process.on('message', (message) => this.handleParentMessage(message));
@@ -131,7 +131,7 @@ class WhatsAppManager {
                 body,
                 ack,
                 type,
-            }),
+            })
         );
     }
 
@@ -151,7 +151,7 @@ class WhatsAppManager {
     }
 
     async handleParentMessage(message) {
-        if (message.type === 'send_message') {
+        if (this.status.isConnected && message.type === 'send_message') {
             const { to, content } = message.data;
 
             try {

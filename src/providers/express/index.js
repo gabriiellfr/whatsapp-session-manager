@@ -2,23 +2,32 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const morgan = require('morgan');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const sessionRoutes = require('../../routes/session.router');
+
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS.split(',');
 
 const app = express();
 const httpServer = http.createServer(app);
 
-app.use(express.json());
-
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+app.use(helmet());
 app.use(morgan('dev'));
 
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+});
+app.use(limiter);
+
 const corsOptions = {
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: allowedOrigins,
     credentials: true,
-    methods: ['POST'],
+    methods: ['GET,HEAD,PUT,PATCH,POST,DELETE'],
     allowedHeaders: [
         'Content-Type',
         'Authorization',

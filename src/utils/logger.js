@@ -1,6 +1,7 @@
-const winston = require('winston');
 const path = require('path');
 const fs = require('fs');
+const winston = require('winston');
+const config = require('../config');
 
 // Create the logs directory if it doesn't exist
 const logDir = path.join(__dirname, '../', '../', 'logs');
@@ -10,7 +11,7 @@ if (!fs.existsSync(logDir)) {
 }
 
 const logger = winston.createLogger({
-    level: 'info',
+    level: config.logLevel,
     format: winston.format.combine(
         winston.format.timestamp({
             format: () => {
@@ -33,12 +34,16 @@ const logger = winston.createLogger({
         }),
         winston.format.printf(({ level, message, timestamp }) => {
             return `[${timestamp}] [${level}]: ${message}`;
-        }),
+        })
     ),
     transports: [
         new winston.transports.Console(),
         new winston.transports.File({
-            filename: path.join(logDir, 'whatsapp-backend.log'),
+            filename: path.join(logDir, 'error.log'),
+            level: 'error',
+        }),
+        new winston.transports.File({
+            filename: path.join(logDir, 'combined.log'),
         }),
     ],
 });
