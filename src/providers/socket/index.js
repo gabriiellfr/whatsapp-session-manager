@@ -6,12 +6,14 @@ const { adminHandler, userHandler } = require('../../handlers');
 
 const { logger } = require('../../utils');
 
+const { allowedOrigins } = require('../../config');
+
 const setup = (server) => {
     logger.info(`Starting socket server`);
 
     const io = socketIo(server, {
         cors: {
-            origin: '*',
+            origin: allowedOrigins.split(','),
         },
     });
 

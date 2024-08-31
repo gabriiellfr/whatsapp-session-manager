@@ -1,10 +1,9 @@
 const { spawn } = require('child_process');
 const path = require('path');
-const kill = require('tree-kill');
 
 const config = require('../config');
 
-const { logger } = require('../utils');
+const { logger, killTree } = require('../utils');
 
 const sessions = new Map();
 
@@ -65,13 +64,8 @@ async function startSession(sessionId, socket, io) {
 async function stopSession(sessionId, io) {
     if (sessions.has(sessionId)) {
         const { process } = sessions.get(sessionId);
-        kill(process.pid, 'SIGTERM', (err) => {
-            if (err) {
-                logger.error(`Error stopping session ${sessionId}`, {
-                    error: err.message,
-                });
-            }
-        });
+
+        await killTree(process.pid);
 
         sessions.delete(sessionId);
         logger.info(`Session stopped ${sessionId}`);
@@ -107,9 +101,9 @@ function handleSessionClose(sessionId, code, io) {
 
 // Graceful shutdown
 const gracefulShutdown = () => {
-    sessions.forEach(({ process }) => {
+    sessions.forEach(async ({ process }) => {
         if (process && !process.killed) {
-            process.kill();
+            await killTree(process.pid);
         }
     });
     process.exit();
