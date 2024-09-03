@@ -2,9 +2,6 @@ const path = require('path');
 const fs = require('fs');
 const winston = require('winston');
 
-const config = require('../config');
-
-// Create the logs directory if it doesn't exist
 const logDir = path.join(__dirname, '../', '../', 'logs');
 
 if (!fs.existsSync(logDir)) {
@@ -12,29 +9,17 @@ if (!fs.existsSync(logDir)) {
 }
 
 const logger = winston.createLogger({
-    level: config.logLevel,
+    level: process.env.LOG_LEVEL || 'info',
     format: winston.format.combine(
         winston.format.timestamp({
             format: () => {
                 const now = new Date();
-                return `${now.getDate().toString().padStart(2, '0')}-${(
-                    now.getMonth() + 1
-                )
-                    .toString()
-                    .padStart(2, '0')}-${now.getFullYear()} ${now
-                    .getHours()
-                    .toString()
-                    .padStart(2, '0')}:${now
-                    .getMinutes()
-                    .toString()
-                    .padStart(2, '0')}:${now
-                    .getSeconds()
-                    .toString()
-                    .padStart(2, '0')}`;
+                return `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
             },
         }),
         winston.format.printf(({ level, message, timestamp }) => {
-            return `[${timestamp}] [${level}]: ${message}`;
+            const log = `[${timestamp}] [${level}]: ${message}`;
+            return log;
         })
     ),
     transports: [

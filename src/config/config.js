@@ -5,6 +5,7 @@ const config = {
     logLevel: process.env.LOG_LEVEL || 'info',
     maxSessions: parseInt(process.env.MAX_SESSIONS) || 100,
     jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
+    firebaseDB: process.env.FIREBASE_DB || '',
 };
 
 module.exports = config;
