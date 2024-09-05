@@ -1,6 +1,7 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode');
-const EventEmitter = require('events');
+import pkg from 'whatsapp-web.js';
+const { Client, LocalAuth } = pkg;
+import qrcode from 'qrcode';
+import EventEmitter from 'events';
 
 class WhatsAppClient extends EventEmitter {
     constructor(config) {
@@ -24,10 +25,20 @@ class WhatsAppClient extends EventEmitter {
         this.heartbeatTimer = null;
         this.puppeteerRetryTimer = null;
         this.reconnectAttempts = 0;
+        this.QRAttempts = 0;
 
         this.isDestroying = false;
 
+        this.ownListeners = {
+            client: new Map(),
+            pupPage: new Map(),
+            pupBrowser: new Map(),
+        };
+
         this.updateStatus('created');
+        this.emit('info', {
+            message: 'Client started and waiting to initialize.',
+        });
     }
 
     createStatus(connectionStatus, extraData = {}) {
@@ -57,6 +68,9 @@ class WhatsAppClient extends EventEmitter {
         }
 
         this.updateStatus('initializing');
+        this.emit('info', {
+            message: 'Starting client setup',
+        });
 
         try {
             this.client = new Client({
@@ -75,44 +89,90 @@ class WhatsAppClient extends EventEmitter {
             this.startHeartbeat();
             await this.client.initialize();
             this.attemptPuppeteerListenerSetup();
+
+            this.emit('info', { message: 'Starting client setup: Success' });
         } catch (error) {
             this.handleError('initialization_error', error);
             this.handleReconnection();
         }
     }
 
+    addOwnListener(target, event, listener) {
+        if (!this.ownListeners[target]) {
+            this.ownListeners[target] = new Map();
+        }
+        if (!this.ownListeners[target].has(event)) {
+            this.ownListeners[target].set(event, new Set());
+        }
+        this.ownListeners[target].get(event).add(listener);
+
+        if (target === 'client' && this.client) {
+            this.client.on(event, listener);
+        } else if (target === 'pupPage' && this.client && this.client.pupPage) {
+            this.client.pupPage.on(event, listener);
+        } else if (
+            target === 'pupBrowser' &&
+            this.client &&
+            this.client.pupBrowser
+        ) {
+            this.client.pupBrowser.on(event, listener);
+        }
+    }
+
     setupEventListeners() {
-        this.emit('info', { message: 'Setting up EventListeners' });
+        this.emit('info', { message: 'Setting up client listeners' });
 
-        this.client.on('qr', async (qr) => {
-            const qrUrl = await qrcode.toDataURL(qr);
+        this.addOwnListener('client', 'qr', async (qr) => {
+            this.QRAttempts++;
 
-            this.updateStatus('qr_ready', { qrUrl });
+            if (this.QRAttempts < this.maxQRAttempts) {
+                const qrUrl = await qrcode.toDataURL(qr);
+                this.updateStatus('qr_ready', { qrUrl });
+            } else {
+                this.emit('info', {
+                    message: 'Max QR code scan attempts reached.',
+                });
+
+                this.destroy();
+            }
         });
 
-        this.client.on('ready', async () => {
+        this.addOwnListener('client', 'ready', async () => {
             this.clientInfo = this.client.info;
             this.updateStatus('ready');
+
             this.reconnectAttempts = 0;
+            this.QRAttempts = 0;
         });
 
-        this.client.on('authenticated', () => {
+        this.addOwnListener('client', 'authenticated', () => {
             this.updateStatus('authenticated');
         });
 
-        this.client.on('auth_failure', (reason) => {
+        this.addOwnListener('client', 'auth_failure', (reason) => {
             this.updateStatus('auth_failure', { message: reason });
         });
 
-        this.client.on('disconnected', (reason) => {
+        this.addOwnListener('client', 'disconnected', (reason) => {
             this.clientInfo = null;
-
             this.updateStatus('disconnected', { message: reason });
         });
+
+        this.addOwnListener('client', 'message', (message) => {
+            if (message.author) return;
+
+            this.emit('incoming_message', message);
+        });
+
+        this.addOwnListener('client', 'message_create', (message) => {
+            this.emit('message_create', message);
+        });
+
+        this.emit('info', { message: 'Setting up client listeners: Success' });
     }
 
     setupPuppeteerEventListeners() {
-        this.emit('info', { message: 'Setting up PuppeteerEventListeners' });
+        this.emit('info', { message: 'Setting up browser listeners' });
 
         const handleError = (errorType) => {
             if (this.isDestroying) {
@@ -125,20 +185,22 @@ class WhatsAppClient extends EventEmitter {
             this.handleReconnection();
         };
 
-        this.client.pupPage.on('error', () =>
+        this.addOwnListener('pupPage', 'error', () =>
             handleError('puppeteer_page_error')
         );
-        this.client.pupPage.on('close', () =>
+        this.addOwnListener('pupPage', 'close', () =>
             handleError('puppeteer_page_closed')
         );
-        this.client.pupBrowser.on('disconnected', () =>
+        this.addOwnListener('pupBrowser', 'disconnected', () =>
             handleError('puppeteer_browser_disconnected')
         );
+
+        this.emit('info', { message: 'Setting up browser listeners: Success' });
     }
 
     attemptPuppeteerListenerSetup(retryCount = 0) {
         this.emit('info', {
-            message: 'Attempting to setup PuppeteerListenerSetup',
+            message: 'Attempting to setup browser listeners',
         });
 
         if (this.client.pupPage && this.client.pupBrowser) {
@@ -168,8 +230,8 @@ class WhatsAppClient extends EventEmitter {
             message: 'Starting Heartbeat.',
         });
 
-        this.heartbeatTimer = setInterval(async () => {
-            if (this.isStopped) {
+        this.heartbeatListener = async () => {
+            if (this.isDestroying) {
                 this.stopHeartbeat();
                 return;
             }
@@ -191,10 +253,27 @@ class WhatsAppClient extends EventEmitter {
                     this.handleReconnection();
                 }
             }
-            if (!this.isStopped) {
+            if (!this.isDestroying) {
                 this.emit('status_update', this.status);
             }
-        }, this.config.heartbeatInterval);
+        };
+
+        this.heartbeatTimer = setInterval(
+            this.heartbeatListener,
+            this.config.heartbeatInterval
+        );
+    }
+
+    stopHeartbeat() {
+        if (this.heartbeatTimer) {
+            this.emit('info', {
+                message: 'Heartbeat stopped.',
+            });
+
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+            this.heartbeatListener = null;
+        }
     }
 
     async handleReconnection() {
@@ -204,6 +283,10 @@ class WhatsAppClient extends EventEmitter {
             });
             return;
         }
+
+        this.emit('info', {
+            message: 'Attempt to reconnect',
+        });
 
         this.reconnectAttempts++;
 
@@ -232,9 +315,15 @@ class WhatsAppClient extends EventEmitter {
         }
     }
 
-    async sendMessage(message, retryCount = 0) {
+    async sendMessage(message, dev = false, retryCount = 0) {
+        console.log(message);
+
+        if (dev) return;
+
         if (!this.status.isConnected) {
-            throw new Error('Client is not connected');
+            this.emit('erro', {
+                message: 'Cannot send message: Client is not connected',
+            });
         }
 
         const { to, body } = message;
@@ -259,72 +348,14 @@ class WhatsAppClient extends EventEmitter {
         }
     }
 
-    async destroy() {
-        if (this.isDestroying) {
-            this.emit('info', { message: 'Destroy already in progress' });
-            return;
-        }
-
-        this.isDestroying = true;
-        this.emit('info', { message: 'Starting destruction process' });
-
-        // Clear all timers
-        clearInterval(this.heartbeatTimer);
-        this.heartbeatTimer = null;
-
-        if (this.puppeteerRetryTimer) {
-            clearTimeout(this.puppeteerRetryTimer);
-            this.puppeteerRetryTimer = null;
-        }
-
-        if (this.client) {
-            try {
-                // Remove all listeners from the client
-                this.client.removeAllListeners();
-
-                // Remove Puppeteer-specific listeners
-                if (this.client.pupPage) {
-                    this.client.pupPage.removeAllListeners();
-                }
-                if (this.client.pupBrowser) {
-                    this.client.pupBrowser.removeAllListeners();
-                }
-
-                // Destroy the client
-                await this.client.destroy();
-            } catch (error) {
-                console.error('Error during client destruction:', error);
-                this.emit('info', {
-                    message: 'Error during client destruction:',
-                });
-            } finally {
-                this.client = null;
-            }
-        }
-
-        // Reset all properties
-        this.clientInfo = null;
-        this.reconnectAttempts = 0;
-
-        // Final status update
-        this.updateStatus('stopped');
-
-        // Remove all remaining listeners after the final emit
-        this.removeAllListeners();
-
-        this.emit('info', {
-            message: 'WhatsAppClient has been completely destroyed',
-        });
-    }
-
     getStatus() {
         return { ...this.status };
     }
 
     async getAllChats() {
         if (!this.status.isConnected) {
-            this.emit('info', {
-                message: 'Cannot retrieve chats, client is not running.',
+            this.emit('error', {
+                message: 'Cannot retrieve chats: Client is not running.',
             });
             return [];
         }
@@ -332,7 +363,6 @@ class WhatsAppClient extends EventEmitter {
         try {
             const chats = await this.client.getChats();
 
-            console.log(chats[0].lastMessage._data.body);
             return chats
                 .map((chat) => ({
                     id: chat.id._serialized,
@@ -354,27 +384,114 @@ class WhatsAppClient extends EventEmitter {
 
     async getMessages(chatId, limit = 50) {
         if (!this.status.isConnected) {
+            this.emit('error', {
+                message: 'Cannot retrieve messages: Client is not running.',
+            });
+            return [];
+        }
+
+        try {
+            const chat = await this.client.getChatById(chatId);
+            const messages = await chat.fetchMessages({ limit });
+
+            return messages.map((msg) => ({
+                id: msg.id._serialized,
+                body: msg.body,
+                fromMe: msg.fromMe,
+                author: msg.author,
+                timestamp: msg.timestamp,
+                hasMedia: msg.hasMedia,
+                from: msg.from,
+                to: msg.to,
+                ack: msg.ack,
+            }));
+        } catch (error) {
             this.emit('info', {
-                message: 'Cannot retrieve messages, client is not running.',
+                message: error.toString(),
             });
             return;
         }
+    }
 
-        const chat = await this.client.getChatById(chatId);
-        const messages = await chat.fetchMessages({ limit });
+    async destroy() {
+        if (this.isDestroying) {
+            this.emit('info', { message: 'Destroy already in progress' });
+            return;
+        }
 
-        return messages.map((msg) => ({
-            id: msg.id._serialized,
-            body: msg.body,
-            fromMe: msg.fromMe,
-            author: msg.author,
-            timestamp: msg.timestamp,
-            hasMedia: msg.hasMedia,
-            from: msg.from,
-            to: msg.to,
-            ack: msg.ack,
-        }));
+        this.isDestroying = true;
+        this.emit('info', { message: 'Starting destruction process' });
+
+        // Stop the heartbeat
+        this.stopHeartbeat();
+
+        if (this.puppeteerRetryTimer) {
+            clearTimeout(this.puppeteerRetryTimer);
+            this.puppeteerRetryTimer = null;
+        }
+
+        if (this.client) {
+            try {
+                // Remove only the listeners added by this class
+                for (const [event, listeners] of this.ownListeners.client) {
+                    for (const listener of listeners) {
+                        this.client.removeListener(event, listener);
+                    }
+                }
+
+                // Remove Puppeteer-specific listeners
+                if (this.client.pupPage) {
+                    for (const [event, listeners] of this.ownListeners
+                        .pupPage) {
+                        for (const listener of listeners) {
+                            this.client.pupPage.removeListener(event, listener);
+                        }
+                    }
+                }
+                if (this.client.pupBrowser) {
+                    for (const [event, listeners] of this.ownListeners
+                        .pupBrowser) {
+                        for (const listener of listeners) {
+                            this.client.pupBrowser.removeListener(
+                                event,
+                                listener
+                            );
+                        }
+                    }
+                }
+
+                // Destroy the client
+                await this.client.destroy();
+            } catch (error) {
+                console.error('Error during client destruction:', error);
+                this.emit('info', {
+                    message: 'Error during client destruction:',
+                    error: error.toString(),
+                });
+            } finally {
+                this.client = null;
+            }
+        }
+
+        // Reset all properties
+        this.clientInfo = null;
+        this.reconnectAttempts = 0;
+        this.QRAttempts = 0;
+
+        // Clear the tracked listeners
+        this.ownListeners = {
+            client: new Map(),
+            pupPage: new Map(),
+            pupBrowser: new Map(),
+        };
+
+        // Final status update
+        this.updateStatus('stopped');
+
+        this.emit('info', {
+            message: 'WhatsAppClient has been completely destroyed',
+        });
     }
 }
 
-module.exports = WhatsAppClient;
+export default WhatsAppClient;

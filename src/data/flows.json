@@ -1,0 +1,212 @@
+[
+  {
+    "id": "barber-shop-flow-1",
+    "name": "Barber Shop Appointment",
+    "trigger": "*",
+    "steps": [
+      {
+        "id": "welcome",
+        "message": "Welcome to our Barber Shop! How can we help you today?",
+        "options": [
+          {
+            "label": "Book an appointment",
+            "value": 1,
+            "nextStep": "book-appointment"
+          },
+          {
+            "label": "Check services and prices",
+            "value": 2,
+            "nextStep": "services-prices"
+          },
+          {
+            "label": "Contact information",
+            "value": 3,
+            "nextStep": "contact-info"
+          },
+          {
+            "label": "Exit",
+            "value": 4,
+            "nextStep": "exit"
+          }
+        ]
+      },
+      {
+        "id": "book-appointment",
+        "message": "Great! What service would you like to book?",
+        "options": [
+          {
+            "label": "Haircut",
+            "value": 1,
+            "nextStep": "select-barber"
+          },
+          {
+            "label": "Beard trim",
+            "value": 2,
+            "nextStep": "select-barber"
+          },
+          {
+            "label": "Hair coloring",
+            "value": 3,
+            "nextStep": "select-barber"
+          },
+          {
+            "label": "Back to main menu",
+            "value": 4,
+            "nextStep": "welcome"
+          }
+        ]
+      },
+      {
+        "id": "select-barber",
+        "message": "Please choose your preferred barber:",
+        "options": [
+          {
+            "label": "John",
+            "value": 1,
+            "nextStep": "select-date"
+          },
+          {
+            "label": "Sarah",
+            "value": 2,
+            "nextStep": "select-date"
+          },
+          {
+            "label": "Mike",
+            "value": 3,
+            "nextStep": "select-date"
+          },
+          {
+            "label": "No preference",
+            "value": 4,
+            "nextStep": "select-date"
+          },
+          {
+            "label": "Back to services",
+            "value": 5,
+            "nextStep": "book-appointment"
+          }
+        ]
+      },
+      {
+        "id": "select-date",
+        "message": "Please choose a date for your appointment:",
+        "options": [
+          {
+            "label": "Today",
+            "value": 1,
+            "nextStep": "select-time"
+          },
+          {
+            "label": "Tomorrow",
+            "value": 2,
+            "nextStep": "select-time"
+          },
+          {
+            "label": "Day after tomorrow",
+            "value": 3,
+            "nextStep": "select-time"
+          },
+          {
+            "label": "Next week",
+            "value": 4,
+            "nextStep": "select-time"
+          },
+          {
+            "label": "Back to barber selection",
+            "value": 5,
+            "nextStep": "select-barber"
+          }
+        ]
+      },
+      {
+        "id": "select-time",
+        "message": "Please choose a time slot:",
+        "options": [
+          {
+            "label": "9:00 AM",
+            "value": 1,
+            "nextStep": "confirmation"
+          },
+          {
+            "label": "11:00 AM",
+            "value": 2,
+            "nextStep": "confirmation"
+          },
+          {
+            "label": "2:00 PM",
+            "value": 3,
+            "nextStep": "confirmation"
+          },
+          {
+            "label": "4:00 PM",
+            "value": 4,
+            "nextStep": "confirmation"
+          },
+          {
+            "label": "Back to date selection",
+            "value": 5,
+            "nextStep": "select-date"
+          }
+        ]
+      },
+      {
+        "id": "confirmation",
+        "message": "Your appointment has been booked! Would you like to do anything else?",
+        "options": [
+          {
+            "label": "Book another appointment",
+            "value": 1,
+            "nextStep": "book-appointment"
+          },
+          {
+            "label": "Return to main menu",
+            "value": 2,
+            "nextStep": "welcome"
+          },
+          {
+            "label": "Exit",
+            "value": 3,
+            "nextStep": "exit"
+          }
+        ]
+      },
+      {
+        "id": "services-prices",
+        "message": "Here are our services and prices:\n\n- Haircut: $25\n- Beard trim: $15\n- Hair coloring: $50",
+        "options": [
+          {
+            "label": "Book an appointment",
+            "value": 1,
+            "nextStep": "book-appointment"
+          },
+          {
+            "label": "Return to main menu",
+            "value": 2,
+            "nextStep": "welcome"
+          }
+        ]
+      },
+      {
+        "id": "contact-info",
+        "message": "You can reach us at:\n\nPhone: (555) 123-4567\nEmail: info@barbershop.com\nAddress: 123 Main St, Anytown, USA",
+        "options": [
+          {
+            "label": "Return to main menu",
+            "value": 1,
+            "nextStep": "welcome"
+          },
+          {
+            "label": "Exit",
+            "value": 2,
+            "nextStep": "exit"
+          }
+        ]
+      },
+      {
+        "id": "exit",
+        "message": "Thank you for using our service. Have a great day!",
+        "options": []
+      }
+    ]
+  }
+]

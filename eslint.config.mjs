@@ -1,25 +1,39 @@
 import globals from 'globals';
 import pluginJs from '@eslint/js';
+import sveltePlugin from 'eslint-plugin-svelte3';
 
-export default [
-    {
-        files: ['**/*.js'],
-        languageOptions: {
-            sourceType: 'commonjs',
-            globals: {
-                ...globals.node, // Include Node.js globals (like `process`, `__dirname`, etc.)
+export default {
+    overrides: [
+        {
+            files: ['**/*.js'],
+            languageOptions: {
+                sourceType: 'commonjs',
+                globals: {
+                    ...globals.node,
+                },
             },
-        },
-        rules: {
-            // Add your custom rules here, if any
-        },
-    },
-    {
-        languageOptions: {
-            globals: {
-                ...globals.browser, // Include browser globals if needed for other files
+            plugins: {
+                'eslint-plugin-svelte3': sveltePlugin,
             },
+            rules: {},
         },
+        {
+            files: ['**/*.svelte'],
+            processor: 'svelte3/svelte3',
+            languageOptions: {
+                globals: {
+                    ...globals.browser,
+                },
+            },
+            plugins: {
+                'eslint-plugin-svelte3': sveltePlugin,
+            },
+            rules: {},
+        },
+    ],
+    extends: [pluginJs.configs.recommended, 'plugin:svelte3/recommended'],
+    settings: {
+        'svelte3/ignore-styles': () => true,
+        'svelte3/ignore-warnings': () => true,
     },
-    pluginJs.configs.recommended, // ESLint's recommended rules
-];
+};
