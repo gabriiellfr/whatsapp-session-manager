@@ -1,30 +1,56 @@
 <script>
-    import ContactList from './ContactList.svelte';
-    import ChatHeader from './ChatHeader.svelte';
-    import MessageList from './MessageList.svelte';
-    import MessageInput from './MessageInput.svelte';
+    import { onMount } from 'svelte';
     import { fade } from 'svelte/transition';
     import { quintOut } from 'svelte/easing';
     import { MessageSquare } from 'lucide-svelte';
 
-    export let filteredContacts;
-    export let selectedContact;
-    export let selectContact;
-    export let searchQuery;
-    export let messages;
-    export let message;
-    export let sendMessage;
-    export let isLoading;
+    import { contactsStore } from '../stores/contactsStore';
+    import { messagesStore } from '../stores/messagesStore';
+
+    import ContactList from '../components/ContactList.svelte';
+    import ChatHeader from '../components/ChatHeader.svelte';
+    import MessageList from '../components/MessageList.svelte';
+    import MessageInput from '../components/MessageInput.svelte';
+
+    let searchQuery = '';
+    let message = { to: '', body: '' };
+
+    $: filteredContacts = $contactsStore.contacts.filter((contact) =>
+        contact.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    $: if ($contactsStore.selectedContact) {
+        messagesStore.fetchMessages($contactsStore.selectedContact.id);
+        message.to = $contactsStore.selectedContact.id;
+    }
+
+    function selectContact(contact) {
+        contactsStore.selectContact(contact);
+    }
+
+    function sendMessage() {
+        if (message.body.trim()) {
+            messagesStore.sendMessage(message);
+            message.body = '';
+        }
+    }
+
+    onMount(() => {
+        contactsStore.fetchContacts();
+    });
 </script>
 
 <div class="w-1/3 border-r border-gray-700 overflow-y-auto bg-gray-800">
-    <ContactList {filteredContacts} {selectContact} bind:searchQuery />
+    <ContactList contacts={filteredContacts} {selectContact} bind:searchQuery />
 </div>
 
 <div class="flex-1 flex flex-col bg-gray-900">
-    {#if selectedContact}
-        <ChatHeader {selectedContact} />
-        <MessageList {messages} {isLoading} />
+    {#if $contactsStore.selectedContact}
+        <ChatHeader contact={$contactsStore.selectedContact} />
+        <MessageList
+            messages={$messagesStore.messages}
+            isLoading={$messagesStore.isLoading}
+        />
         <MessageInput bind:message {sendMessage} />
     {:else}
         <div

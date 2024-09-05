@@ -1,13 +1,11 @@
 <script>
     import { onMount } from 'svelte';
-    import { v4 as uuidv4 } from 'uuid';
-    import FlowNode from './FlowNode.svelte';
     import { fade, slide } from 'svelte/transition';
+    import { v4 as uuidv4 } from 'uuid';
 
-    export let flows = [];
-    export let saveFlow;
-    export let deleteFlow;
-    export let fetchFlows;
+    import { flowsStore } from '../../stores/flowsStore';
+
+    import FlowNode from './FlowNode.svelte';
 
     let currentFlow = null;
     let showEditor = false;
@@ -15,7 +13,7 @@
     let successMessage = '';
 
     onMount(() => {
-        fetchFlows();
+        flowsStore.fetchFlows();
     });
 
     function createNewFlow() {
@@ -116,9 +114,8 @@
         }
 
         try {
-            const savedFlow = await saveFlow(currentFlow);
+            await flowsStore.saveFlow(currentFlow);
             successMessage = 'Flow saved successfully!';
-            await fetchFlows();
             setTimeout(() => {
                 showEditor = false;
                 currentFlow = null;
@@ -139,9 +136,8 @@
     async function handleDeleteFlow(flowId) {
         if (confirm('Are you sure you want to delete this flow?')) {
             try {
-                await deleteFlow(flowId);
+                await flowsStore.deleteFlow(flowId);
                 successMessage = 'Flow deleted successfully!';
-                await fetchFlows();
                 setTimeout(() => {
                     successMessage = '';
                 }, 2000);
@@ -152,10 +148,8 @@
     }
 </script>
 
-<div class="h-full w-full p-4 overflow-auto bg-gray-800">
+<div class="h-full w-full overflow-auto">
     <div class="max-w-7xl mx-auto">
-        <h2 class="text-3xl font-bold mb-6 text-gray-100">Flow Manager</h2>
-
         {#if successMessage}
             <div
                 class="bg-green-900 border-l-4 border-green-500 text-green-100 p-4 mb-4"
@@ -177,7 +171,7 @@
                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                 in:fade
             >
-                {#each flows as flow (flow.id)}
+                {#each $flowsStore as flow (flow.id)}
                     <div
                         class="bg-gray-600 p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1"
                     >

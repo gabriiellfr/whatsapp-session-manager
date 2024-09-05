@@ -9,8 +9,8 @@ class WhatsAppClient extends EventEmitter {
         this.config = {
             sessionId: 'default_session',
             maxReconnectAttempts: 10,
-            reconnectInterval: 5000,
-            heartbeatInterval: 5000,
+            reconnectInterval: 10000,
+            heartbeatInterval: 10000,
             messageRetryAttempts: 3,
             messageRetryDelay: 5000,
             maxQRAttempts: 5,
@@ -93,7 +93,12 @@ class WhatsAppClient extends EventEmitter {
             this.emit('info', { message: 'Starting client setup: Success' });
         } catch (error) {
             this.handleError('initialization_error', error);
-            this.handleReconnection();
+
+            this.emit('info', {
+                message: 'Error while initializing',
+            });
+
+            await this.handleReconnection();
         }
     }
 
@@ -125,7 +130,7 @@ class WhatsAppClient extends EventEmitter {
         this.addOwnListener('client', 'qr', async (qr) => {
             this.QRAttempts++;
 
-            if (this.QRAttempts < this.maxQRAttempts) {
+            if (this.QRAttempts < this.config.maxQRAttempts) {
                 const qrUrl = await qrcode.toDataURL(qr);
                 this.updateStatus('qr_ready', { qrUrl });
             } else {
@@ -133,7 +138,7 @@ class WhatsAppClient extends EventEmitter {
                     message: 'Max QR code scan attempts reached.',
                 });
 
-                this.destroy();
+                this.stop();
             }
         });
 
@@ -285,7 +290,7 @@ class WhatsAppClient extends EventEmitter {
         }
 
         this.emit('info', {
-            message: 'Attempt to reconnect',
+            message: 'Attempting to reconnect',
         });
 
         this.reconnectAttempts++;
@@ -297,8 +302,7 @@ class WhatsAppClient extends EventEmitter {
             });
 
             try {
-                await this.client.destroy();
-                this.client = null;
+                await this.destroy();
 
                 setTimeout(
                     () => this.initialize(),
@@ -318,7 +322,7 @@ class WhatsAppClient extends EventEmitter {
     async sendMessage(message, dev = true, retryCount = 0) {
         console.log(message);
 
-        if (dev && message.to !== '573504797873@c.us') return;
+        if (dev && message.to !== '555191868922@c.us') return;
 
         if (!this.status.isConnected) {
             this.emit('erro', {
@@ -415,6 +419,16 @@ class WhatsAppClient extends EventEmitter {
         }
     }
 
+    async logout() {
+        this.emit('info', { message: 'Logging out client...' });
+        await this.client.logout();
+    }
+
+    async stop() {
+        this.emit('info', { message: 'Stopping Client...' });
+        await this.client.destroy();
+    }
+
     async destroy() {
         if (this.isDestroying) {
             this.emit('info', { message: 'Destroy already in progress' });
@@ -450,6 +464,7 @@ class WhatsAppClient extends EventEmitter {
                         }
                     }
                 }
+
                 if (this.client.pupBrowser) {
                     for (const [event, listeners] of this.ownListeners
                         .pupBrowser) {
@@ -487,12 +502,11 @@ class WhatsAppClient extends EventEmitter {
             pupBrowser: new Map(),
         };
 
-        // Final status update
-        this.updateStatus('stopped');
-
         this.emit('info', {
             message: 'WhatsAppClient has been completely destroyed',
         });
+
+        this.isDestroying = false;
     }
 }
 

@@ -2,12 +2,19 @@
     export let qrUrl;
 </script>
 
-<div class="bg-gray-800 p-6 rounded-lg shadow-md mb-6">
-    <h3 class="text-lg font-semibold mb-4 text-green-500">
-        Scan QR Code to Connect
-    </h3>
-    <div class="bg-white p-4 rounded-lg inline-block mx-auto">
-        <img src={qrUrl} alt="WhatsApp QR Code" class="w-64 h-64" />
+<div class="w-full p-4 bg-gray-600 rounded-lg shadow-md">
+    <h2 class="text-xl font-semibold text-gray-100 mb-4 text-center">
+        Scan this QR Code
+    </h2>
+    <div
+        class="flex justify-center items-center bg-white p-2 rounded-lg mx-auto"
+        style="width: 16rem; height: 16rem;"
+    >
+        <img
+            src={qrUrl}
+            alt="WhatsApp QR Code"
+            class="w-full h-full object-contain"
+        />
     </div>
     <p class="text-sm text-gray-400 mt-4 text-center">
         Open WhatsApp on your phone and scan this QR code to log in

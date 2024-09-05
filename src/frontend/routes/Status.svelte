@@ -5,24 +5,23 @@
 
     import { statusStore } from '../stores/statusStore';
 
-    import StatusDisplay from '../components/StatusDisplay.svelte';
-    import QRCode from '../components/QRCode.svelte';
-    import ClientInfo from '../components/ClientInfo.svelte';
-    import InfoMessages from '../components/InfoMessages.svelte';
+    import StatusDisplay from '../components/status/StatusDisplay.svelte';
+    import QRCode from '../components/status/QRCode.svelte';
+    import ClientInfo from '../components/status/ClientInfo.svelte';
+    import InfoMessages from '../components/status/InfoMessages.svelte';
 
     let showInfoMessages = false;
 
-    $: isConnected =
-        $statusStore.status.status === 'ready' ||
-        $statusStore.status.status === 'authenticated';
+    $: isConnected = $statusStore.status.status === 'ready';
 </script>
 
 <div
     class="flex-1 p-4 sm:p-6 overflow-y-auto bg-gray-800"
     in:fade={{ duration: 300, easing: quintOut }}
 >
-    <div class="max-w-3xl mx-auto space-y-4">
-        <header class="bg-gray-600 p-4 rounded-lg shadow-sm">
+    <div class="max-w-3xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="bg-gray-600 p-6 rounded-lg shadow-md">
             <h1 class="text-2xl font-bold text-gray-100">
                 WhatsApp Connection Manager
             </h1>
@@ -31,21 +30,40 @@
             </p>
         </header>
 
+        <!-- QR Code -->
+        {#if $statusStore.status.status === 'qr_ready' && $statusStore.status.statusInfo && $statusStore.status.statusInfo.qrUrl}
+            <div class="flex justify-center">
+                <QRCode qrUrl={$statusStore.status.statusInfo.qrUrl} />
+            </div>
+        {/if}
+
+        <!-- Status Display -->
         <StatusDisplay status={$statusStore.status} />
 
-        <div class="bg-gray-600 p-4 rounded-lg shadow-sm">
-            <div class="flex space-x-4">
+        <!-- Action Buttons -->
+        <div class="bg-gray-600 p-4 rounded-lg shadow-md">
+            <div
+                class="flex flex-col sm:flex-row gap-4 text-center justify-center"
+            >
                 <button
                     on:click={statusStore.initialize}
-                    class="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
+                    class="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
                     disabled={isConnected}
                 >
                     <Power size={16} class="mr-2" />
                     Initialize
                 </button>
                 <button
+                    on:click={statusStore.logout}
+                    class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
+                    disabled={!isConnected}
+                >
+                    <StopCircle size={16} class="mr-2" />
+                    Logout
+                </button>
+                <button
                     on:click={statusStore.stop}
-                    class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
+                    class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
                     disabled={!isConnected}
                 >
                     <StopCircle size={16} class="mr-2" />
@@ -54,15 +72,13 @@
             </div>
         </div>
 
-        {#if $statusStore.status.status === 'qr_ready' && $statusStore.status.statusInfo && $statusStore.status.statusInfo.qrUrl}
-            <QRCode qrUrl={$statusStore.status.statusInfo.qrUrl} />
-        {/if}
-
+        <!-- Client Info -->
         {#if $statusStore.status.clientInfo}
             <ClientInfo clientInfo={$statusStore.status.clientInfo} />
         {/if}
 
-        <div class="bg-gray-600 rounded-lg shadow-sm overflow-hidden">
+        <!-- Info Messages Toggle -->
+        <div class="bg-gray-600 rounded-lg shadow-md overflow-hidden">
             <button
                 on:click={() => (showInfoMessages = !showInfoMessages)}
                 class="w-full px-4 py-3 flex justify-between items-center text-left focus:outline-none"

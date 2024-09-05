@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer } from 'http';
 import WebSocket from 'ws';
+import path from 'path';
 
 import WhatsAppClient from './whatsappClient.js';
 import { AutoFlowService } from './autoFlowService.js';
@@ -10,6 +11,8 @@ async function createServerFn() {
     const server = createServer(app);
     const wss = new WebSocket.Server({ server });
     const port = 3002;
+
+    const __dirname = path.resolve();
 
     // Serve static files from the 'public' directory
     app.use(express.static('public'));
@@ -65,6 +68,7 @@ async function createServerFn() {
 
         // Listen for WhatsAppClient events and send updates to the client
         const statusUpdateHandler = (status) => {
+            console.log(status);
             ws.send(JSON.stringify({ type: 'status', data: status }));
         };
 
@@ -122,6 +126,11 @@ async function createServerFn() {
     app.post('/api/start', async (req, res) => {
         await whatsAppClient.initialize();
         res.json({ message: 'Initialization started' });
+    });
+
+    app.post('/api/logout', async (req, res) => {
+        await whatsAppClient.logout();
+        res.json({ message: 'Client logged out' });
     });
 
     app.post('/api/stop', async (req, res) => {
@@ -183,6 +192,10 @@ async function createServerFn() {
     app.delete('/api/flows/:id', async (req, res) => {
         await autoFlowService.deleteFlow(req.params.id);
         res.json({ message: 'Flow deleted successfully' });
+    });
+
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
     });
 
     server.listen(port, async () => {

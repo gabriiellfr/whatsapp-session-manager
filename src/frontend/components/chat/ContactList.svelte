@@ -1,71 +1,73 @@
 <script>
     import { Search } from 'lucide-svelte';
 
-    export let filteredContacts;
+    export let filteredContacts = [];
     export let selectContact;
-    export let searchQuery;
+    export let searchQuery = '';
 
     const formatTimestamp = (timestamp) => {
-        const utcDate = new Date(timestamp * 1000);
-
-        const options = {
+        if (!timestamp) return '';
+        const date = new Date(timestamp * 1000);
+        return date.toLocaleTimeString('pt-BR', {
             timeZone: 'America/Sao_Paulo',
             hour: '2-digit',
             minute: '2-digit',
-        };
-
-        return utcDate.toLocaleTimeString('pt-BR', options);
+        });
     };
 </script>
 
-<div class="p-4 bg-gray-800">
-    <div class="relative">
-        <input
-            type="text"
-            bind:value={searchQuery}
-            placeholder="Search or start new chat"
-            class="w-full px-4 py-2 pl-10 bg-gray-700 text-gray-100 border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
-        />
-        <Search class="absolute left-3 top-2.5 text-gray-400" size={20} />
+<div class="flex flex-col h-full bg-gray-800">
+    <div class="p-4 bg-gray-800 flex-shrink-0">
+        <div class="relative">
+            <input
+                type="text"
+                bind:value={searchQuery}
+                placeholder="Search or start new chat"
+                class="w-full px-4 py-2 pl-10 bg-gray-700 text-gray-100 border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+            />
+            <Search class="absolute left-3 top-2.5 text-gray-400" size={20} />
+        </div>
     </div>
-</div>
-<ul class="list-none p-0 m-0 bg-gray-800">
-    {#each filteredContacts as contact}
-        <li class="w-full">
-            <button
-                class="w-full text-left hover:bg-gray-700 transition-colors duration-200 focus:outline-none focus:bg-gray-700"
-                on:click={() => selectContact(contact)}
-            >
-                <div
-                    class="flex items-center px-4 py-3 border-b border-gray-700"
+    <ul class="list-none p-0 m-0 bg-gray-800 flex-grow overflow-y-auto">
+        {#each filteredContacts as contact (contact.id)}
+            <li class="w-full">
+                <button
+                    class="w-full text-left hover:bg-gray-700 transition-colors duration-200 focus:outline-none focus:bg-gray-700"
+                    on:click={() => selectContact(contact)}
                 >
                     <div
-                        class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-semibold mr-3 shadow-md flex-shrink-0"
+                        class="flex items-center px-4 py-3 border-b border-gray-700"
                     >
-                        {contact.name[0]}
-                    </div>
-                    <div class="flex-grow min-w-0">
-                        <h3 class="font-semibold text-gray-100 truncate">
-                            {contact.name}
-                        </h3>
-                        <p class="text-sm text-gray-400 truncate">
-                            {String(contact.lastMessage).slice(0, 30) || ''}
-                        </p>
-                    </div>
-                    <div class="flex flex-col items-end ml-2 flex-shrink-0">
-                        <span class="text-xs text-gray-400 mb-1"
-                            >{formatTimestamp(contact.timestamp)}</span
+                        <div
+                            class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-semibold mr-3 shadow-md flex-shrink-0"
                         >
-                        {#if contact.unreadCount > 0}
-                            <span
-                                class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full"
-                            >
-                                {contact.unreadCount}
+                            {contact.name ? contact.name[0].toUpperCase() : ''}
+                        </div>
+                        <div class="flex-grow min-w-0">
+                            <h3 class="font-semibold text-gray-100 truncate">
+                                {contact.name || 'Unknown'}
+                            </h3>
+                            <p class="text-sm text-gray-400 truncate">
+                                {contact.lastMessage?.slice(0, 30) || ''}
+                            </p>
+                        </div>
+                        <div class="flex flex-col items-end ml-2 flex-shrink-0">
+                            <span class="text-xs text-gray-400 mb-1">
+                                {formatTimestamp(contact.timestamp)}
                             </span>
-                        {/if}
+                            {#if contact.unreadCount > 0}
+                                <span
+                                    class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full"
+                                >
+                                    {contact.unreadCount}
+                                </span>
+                            {/if}
+                        </div>
                     </div>
-                </div>
-            </button>
-        </li>
-    {/each}
-</ul>
+                </button>
+            </li>
+        {:else}
+            <li class="p-4 text-gray-400 text-center">No contacts found</li>
+        {/each}
+    </ul>
+</div>

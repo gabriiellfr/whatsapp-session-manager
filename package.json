@@ -25,6 +25,7 @@
         "socket.io": "^4.4.1",
         "socket.io-client": "^4.4.1",
         "svelte": "^3.44.0",
+        "svelte-routing": "^2.13.0",
         "uuid": "^10.0.0",
         "whatsapp-web.js": "^1.25.0"
     },
