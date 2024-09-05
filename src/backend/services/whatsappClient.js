@@ -28,6 +28,9 @@ class WhatsAppClient extends EventEmitter {
         this.QRAttempts = 0;
 
         this.isDestroying = false;
+        this.isLoggingOut = false;
+        this.isStopping = false;
+        this.isInitialized = false;
 
         this.ownListeners = {
             client: new Map(),
@@ -57,12 +60,20 @@ class WhatsAppClient extends EventEmitter {
 
     handleError(message, error) {
         this.updateStatus(message, { message: error });
+        this.emit('error', { message, error });
     }
 
     async initialize() {
-        if (this.client) {
+        if (this.isInitialized) {
             this.emit('info', {
                 message: 'Client already initialized. Skipping initialization.',
+            });
+            return;
+        }
+
+        if (this.isStopping) {
+            this.emit('error', {
+                message: 'Cannot initialize after stop. Create a new instance.',
             });
             return;
         }
@@ -90,6 +101,7 @@ class WhatsAppClient extends EventEmitter {
             await this.client.initialize();
             this.attemptPuppeteerListenerSetup();
 
+            this.isInitialized = true;
             this.emit('info', { message: 'Starting client setup: Success' });
         } catch (error) {
             this.handleError('initialization_error', error);
@@ -282,9 +294,9 @@ class WhatsAppClient extends EventEmitter {
     }
 
     async handleReconnection() {
-        if (this.isDestroying) {
+        if (this.isDestroying || this.isStopping || this.isLoggingOut) {
             this.emit('info', {
-                message: 'Ignoring reconnection attempt during shutdown',
+                message: 'Ignoring reconnection attempt during shutdown/logout',
             });
             return;
         }
@@ -304,10 +316,11 @@ class WhatsAppClient extends EventEmitter {
             try {
                 await this.destroy();
 
-                setTimeout(
-                    () => this.initialize(),
-                    this.config.reconnectInterval
+                await new Promise((resolve) =>
+                    setTimeout(resolve, this.config.reconnectInterval)
                 );
+
+                await this.initialize();
             } catch (error) {
                 this.handleError('reconnection_error', error);
             }
@@ -319,114 +332,32 @@ class WhatsAppClient extends EventEmitter {
         }
     }
 
-    async sendMessage(message, dev = true, retryCount = 0) {
-        console.log(message);
-
-        if (dev && message.to !== '555191868922@c.us') return;
-
-        if (!this.status.isConnected) {
-            this.emit('erro', {
-                message: 'Cannot send message: Client is not connected',
-            });
-        }
-
-        const { to, body } = message;
-
-        try {
-            const chat = await this.client.getChatById(to);
-            await chat.sendMessage(body);
-        } catch (error) {
-            this.emit('info', { message: 'Failed to send message', error });
-            if (retryCount < this.config.messageRetryAttempts) {
-                await new Promise((resolve) =>
-                    setTimeout(resolve, this.config.messageRetryDelay)
-                );
-
-                return this.sendMessage(message, retryCount + 1);
-            } else {
-                this.emit('info', {
-                    message: 'Max retry attempts reached for sending message',
-                    error,
-                });
-            }
-        }
-    }
-
-    getStatus() {
-        return { ...this.status };
-    }
-
-    async getAllChats() {
-        if (!this.status.isConnected) {
-            this.emit('error', {
-                message: 'Cannot retrieve chats: Client is not running.',
-            });
-            return [];
-        }
-
-        try {
-            const chats = await this.client.getChats();
-
-            return chats
-                .map((chat) => ({
-                    id: chat.id._serialized,
-                    name: chat.name,
-                    isGroup: chat.isGroup,
-                    timestamp: chat.timestamp,
-                    unreadCount: chat.unreadCount,
-                    lastMessage: chat.lastMessage?._data?.body,
-                }))
-                .sort((a, b) => b.timestamp - a.timestamp);
-        } catch (error) {
-            this.emit('error', {
-                message: 'Error retrieving chats',
-                error: error.message,
-            });
-            return [];
-        }
-    }
-
-    async getMessages(chatId, limit = 50) {
-        if (!this.status.isConnected) {
-            this.emit('error', {
-                message: 'Cannot retrieve messages: Client is not running.',
-            });
-            return [];
-        }
-
-        try {
-            const chat = await this.client.getChatById(chatId);
-            const messages = await chat.fetchMessages({ limit });
-
-            await chat.sendSeen();
-
-            return messages.map((msg) => ({
-                id: msg.id.id,
-                body: msg.body,
-                fromMe: msg.fromMe,
-                author: msg.author,
-                timestamp: msg.timestamp,
-                hasMedia: msg.hasMedia,
-                from: msg.from,
-                to: msg.to,
-                ack: msg.ack,
-            }));
-        } catch (error) {
-            this.emit('info', {
-                message: error.toString(),
-            });
+    async logout() {
+        if (this.isLoggingOut) {
+            this.emit('info', { message: 'Logout already in progress' });
             return;
         }
-    }
 
-    async logout() {
+        this.isLoggingOut = true;
         this.emit('info', { message: 'Logging out client...' });
-        await this.client.logout();
+
+        try {
+            if (this.client) {
+                await this.client.logout();
+            }
+        } catch (error) {
+            this.handleError('logout_error', error);
+        } finally {
+            await this.destroy();
+            this.isLoggingOut = false;
+            this.updateStatus('logged_out');
+        }
     }
 
     async stop() {
         this.emit('info', { message: 'Stopping Client...' });
-        await this.client.destroy();
+        this.updateStatus('stopped');
+        await this.destroy();
     }
 
     async destroy() {
@@ -477,13 +408,15 @@ class WhatsAppClient extends EventEmitter {
                     }
                 }
 
-                // Destroy the client
-                await this.client.destroy();
+                // Only destroy the client if we're not logging out or stopping
+                if (!this.isLoggingOut && !this.isStopping) {
+                    await this.client.destroy();
+                }
             } catch (error) {
                 console.error('Error during client destruction:', error);
                 this.emit('info', {
                     message: 'Error during client destruction:',
-                    error: error.toString(),
+                    error,
                 });
             } finally {
                 this.client = null;
@@ -494,6 +427,7 @@ class WhatsAppClient extends EventEmitter {
         this.clientInfo = null;
         this.reconnectAttempts = 0;
         this.QRAttempts = 0;
+        this.isInitialized = false;
 
         // Clear the tracked listeners
         this.ownListeners = {
@@ -502,11 +436,109 @@ class WhatsAppClient extends EventEmitter {
             pupBrowser: new Map(),
         };
 
+        this.updateStatus('stopped');
         this.emit('info', {
             message: 'WhatsAppClient has been completely destroyed',
         });
 
         this.isDestroying = false;
+    }
+
+    getStatus() {
+        return { ...this.status };
+    }
+
+    async getAllChats() {
+        if (!this.status.isConnected) {
+            this.emit('error', {
+                message: 'Cannot retrieve chats: Client is not running.',
+            });
+            return [];
+        }
+
+        try {
+            const chats = await this.client.getChats();
+
+            return chats
+                .map((chat) => ({
+                    id: chat.id._serialized,
+                    name: chat.name,
+                    isGroup: chat.isGroup,
+                    timestamp: chat.timestamp,
+                    unreadCount: chat.unreadCount,
+                    lastMessage: chat.lastMessage?._data?.body,
+                }))
+                .sort((a, b) => b.timestamp - a.timestamp);
+        } catch (error) {
+            this.handleError('get_all_chats_error', error);
+            return [];
+        }
+    }
+
+    async sendMessage(message, dev = true, retryCount = 0) {
+        console.log(message);
+
+        if (dev && message.to !== '555191868922@c.us') return;
+
+        if (!this.status.isConnected) {
+            this.emit('erro', {
+                message: 'Cannot send message: Client is not connected',
+            });
+        }
+
+        const { to, body } = message;
+
+        try {
+            const chat = await this.client.getChatById(to);
+            await chat.sendMessage(body);
+        } catch (error) {
+            this.emit('info', { message: 'Failed to send message', error });
+            if (retryCount < this.config.messageRetryAttempts) {
+                await new Promise((resolve) =>
+                    setTimeout(resolve, this.config.messageRetryDelay)
+                );
+
+                return this.sendMessage(message, retryCount + 1);
+            } else {
+                this.emit('info', {
+                    message: 'Max retry attempts reached for sending message',
+                    error,
+                });
+            }
+        }
+    }
+
+    async getMessages(chatId, limit = 50) {
+        if (!this.status.isConnected) {
+            this.emit('error', {
+                message: 'Cannot retrieve messages: Client is not running.',
+            });
+            return [];
+        }
+
+        try {
+            const chat = await this.client.getChatById(chatId);
+            const messages = await chat.fetchMessages({ limit });
+
+            await chat.sendSeen();
+
+            return messages.map((msg) => ({
+                id: msg.id.id,
+                body: msg.body,
+                fromMe: msg.fromMe,
+                author: msg.author,
+                timestamp: msg.timestamp,
+                hasMedia: msg.hasMedia,
+                from: msg.from,
+                to: msg.to,
+                ack: msg.ack,
+            }));
+        } catch (error) {
+            this.emit('info', {
+                message: error,
+            });
+            return;
+        }
     }
 }
 

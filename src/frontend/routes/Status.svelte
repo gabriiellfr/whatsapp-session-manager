@@ -16,10 +16,10 @@
 </script>
 
 <div
-    class="flex-1 p-4 sm:p-6 overflow-y-auto bg-gray-800"
+    class="h-full flex-1 p-4 sm:p-6 overflow-y-auto bg-gray-800"
     in:fade={{ duration: 300, easing: quintOut }}
 >
-    <div class="max-w-3xl mx-auto space-y-6">
+    <div class="h-auto max-w-3xl mx-auto space-y-6">
         <!-- Header -->
         <header class="bg-gray-600 p-6 rounded-lg shadow-md">
             <h1 class="text-2xl font-bold text-gray-100">

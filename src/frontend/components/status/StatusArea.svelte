@@ -3,12 +3,12 @@
     import { quintOut } from 'svelte/easing';
     import { Power, StopCircle, ChevronDown, ChevronUp } from 'lucide-svelte';
 
-    import { statusStore } from '../stores/statusStore';
+    import { statusStore } from '../../stores';
 
-    import StatusDisplay from '../components/StatusDisplay.svelte';
-    import QRCode from '../components/QRCode.svelte';
-    import ClientInfo from '../components/ClientInfo.svelte';
-    import InfoMessages from '../components/InfoMessages.svelte';
+    import StatusDisplay from '../../components/StatusDisplay.svelte';
+    import QRCode from '../../components/QRCode.svelte';
+    import ClientInfo from '../../components/ClientInfo.svelte';
+    import InfoMessages from '../../components/InfoMessages.svelte';
 
     let showInfoMessages = false;
 
