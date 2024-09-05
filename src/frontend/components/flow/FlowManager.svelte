@@ -152,13 +152,13 @@
     }
 </script>
 
-<div class="h-full w-full p-4 overflow-auto bg-gray-100">
+<div class="h-full w-full p-4 overflow-auto bg-gray-800">
     <div class="max-w-7xl mx-auto">
-        <h2 class="text-3xl font-bold mb-6 text-gray-800">Flow Manager</h2>
+        <h2 class="text-3xl font-bold mb-6 text-gray-100">Flow Manager</h2>
 
         {#if successMessage}
             <div
-                class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4"
+                class="bg-green-900 border-l-4 border-green-500 text-green-100 p-4 mb-4"
                 role="alert"
             >
                 <p>{successMessage}</p>
@@ -168,7 +168,7 @@
         {#if !showEditor}
             <button
                 on:click={createNewFlow}
-                class="bg-blue-600 text-white px-6 py-3 rounded-md mb-6 hover:bg-blue-700 transition-colors duration-200 shadow-md"
+                class="bg-green-600 text-white px-6 py-3 rounded-md mb-6 hover:bg-green-700 transition-colors duration-200 shadow-md"
             >
                 Create New Flow
             </button>
@@ -179,28 +179,28 @@
             >
                 {#each flows as flow (flow.id)}
                     <div
-                        class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1"
+                        class="bg-gray-600 p-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1"
                     >
-                        <h3 class="text-xl font-semibold mb-3 text-gray-800">
+                        <h3 class="text-xl font-semibold mb-3 text-gray-100">
                             {flow.name}
                         </h3>
-                        <p class="text-sm mb-2 text-gray-600">
+                        <p class="text-sm mb-2 text-gray-300">
                             <span class="font-medium">Trigger:</span>
                             {flow.trigger}
                         </p>
-                        <p class="text-sm mb-4 text-gray-600">
+                        <p class="text-sm mb-4 text-gray-300">
                             Steps: {flow.steps.length}
                         </p>
                         <div class="flex justify-end space-x-2">
                             <button
                                 on:click={() => editFlow(flow)}
-                                class="bg-blue-500 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-600 transition-colors duration-200"
+                                class="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 transition-colors duration-200"
                             >
                                 Edit
                             </button>
                             <button
                                 on:click={() => handleDeleteFlow(flow.id)}
-                                class="bg-red-500 text-white px-4 py-2 rounded-md text-sm hover:bg-red-600 transition-colors duration-200"
+                                class="bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700 transition-colors duration-200"
                             >
                                 Delete
                             </button>
@@ -209,38 +209,38 @@
                 {/each}
             </div>
         {:else}
-            <div class="bg-white p-8 rounded-lg shadow-md mb-4" in:slide>
+            <div class="bg-gray-600 p-4 rounded-lg shadow-md mb-4" in:slide>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
                         <label
                             for="flowName"
-                            class="block text-sm font-medium text-gray-700 mb-2"
+                            class="block text-sm font-medium text-gray-300 mb-2"
                             >Flow Name</label
                         >
                         <input
                             id="flowName"
                             bind:value={currentFlow.name}
                             placeholder="Enter flow name"
-                            class="w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                            class="w-full p-3 bg-gray-700 border-gray-600 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg text-gray-100"
                         />
                     </div>
                     <div>
                         <label
                             for="flowTrigger"
-                            class="block text-sm font-medium text-gray-700 mb-2"
+                            class="block text-sm font-medium text-gray-300 mb-2"
                             >Trigger</label
                         >
                         <input
                             id="flowTrigger"
                             bind:value={currentFlow.trigger}
                             placeholder="Enter trigger (text or number)"
-                            class="w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                            class="w-full p-3 bg-gray-700 border-gray-600 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg text-gray-100"
                         />
                     </div>
                 </div>
 
                 {#if errorMessage}
-                    <p class="text-red-500 mb-6 bg-red-100 p-3 rounded-md">
+                    <p class="text-red-400 mb-6 bg-red-900 p-3 rounded-md">
                         {errorMessage}
                     </p>
                 {/if}
@@ -261,7 +261,7 @@
 
                 <button
                     on:click={addStep}
-                    class="bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 transition-colors duration-200 shadow-md"
+                    class="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 transition-colors duration-200 shadow-md"
                 >
                     Add Step
                 </button>
@@ -269,13 +269,13 @@
                 <div class="mt-8 flex justify-end space-x-4">
                     <button
                         on:click={cancelEdit}
-                        class="bg-gray-300 text-gray-800 px-6 py-3 rounded-md hover:bg-gray-400 transition-colors duration-200"
+                        class="bg-gray-600 text-gray-100 px-6 py-3 rounded-md hover:bg-gray-700 transition-colors duration-200"
                     >
                         Cancel
                     </button>
                     <button
                         on:click={handleSaveFlow}
-                        class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors duration-200 shadow-md"
+                        class="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 transition-colors duration-200 shadow-md"
                     >
                         Save Flow
                     </button>

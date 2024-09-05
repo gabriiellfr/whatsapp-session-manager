@@ -14,25 +14,26 @@
     export let messages;
     export let message;
     export let sendMessage;
+    export let isLoading;
 </script>
 
-<div class="w-1/3 border-r border-gray-300 overflow-y-auto bg-white">
+<div class="w-1/3 border-r border-gray-700 overflow-y-auto bg-gray-800">
     <ContactList {filteredContacts} {selectContact} bind:searchQuery />
 </div>
 
-<div class="flex-1 flex flex-col">
+<div class="flex-1 flex flex-col bg-gray-900">
     {#if selectedContact}
         <ChatHeader {selectedContact} />
-        <MessageList {messages} />
+        <MessageList {messages} {isLoading} />
         <MessageInput bind:message {sendMessage} />
     {:else}
         <div
-            class="flex-1 flex items-center justify-center bg-gray-100"
+            class="flex-1 flex items-center justify-center bg-gray-800"
             in:fade={{ duration: 300, easing: quintOut }}
         >
             <div class="text-center">
-                <MessageSquare size={64} class="text-teal-500 mx-auto mb-4" />
-                <p class="text-xl text-gray-600 font-medium">
+                <MessageSquare size={64} class="text-green-500 mx-auto mb-4" />
+                <p class="text-xl text-gray-300 font-medium">
                     Select a contact to start chatting
                 </p>
             </div>

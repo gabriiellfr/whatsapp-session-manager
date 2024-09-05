@@ -37,6 +37,23 @@ async function createServerFn() {
     const autoFlowService = new AutoFlowService(whatsAppClient);
     await autoFlowService.initialize();
 
+    // Add a Set to store recently processed message IDs
+    const processedMessages = new Set();
+    const MESSAGE_RETENTION_TIME = 60000; // 1 minute in milliseconds
+
+    // Function to clean up old message IDs
+    function cleanupOldMessages() {
+        const cutoffTime = Date.now() - MESSAGE_RETENTION_TIME;
+        processedMessages.forEach(([id, timestamp]) => {
+            if (timestamp < cutoffTime) {
+                processedMessages.delete(id);
+            }
+        });
+    }
+
+    // Set up periodic cleanup
+    setInterval(cleanupOldMessages, MESSAGE_RETENTION_TIME);
+
     // WebSocket connection handler
     wss.on('connection', (ws) => {
         console.log('Client connected');
@@ -60,9 +77,13 @@ async function createServerFn() {
         };
 
         const incomingMessageHandler = (message) => {
-            console.log('incomingMessageHandler', message.from);
+            console.log('incomingMessageHandler', message.from, message.body);
 
             if (message.from !== 'status@broadcast' && message.body !== '') {
+                if (processedMessages.has(message.id.id)) return;
+
+                processedMessages.add(message.id.id);
+
                 ws.send(
                     JSON.stringify({ type: 'incoming_message', data: message })
                 );
@@ -73,6 +94,14 @@ async function createServerFn() {
 
         const messageCreateHandler = (message) => {
             //console.log('messageCreateHandler', message.from, message.body);
+
+            if (message.from !== 'status@broadcast' && message.body !== '') {
+                ws.send(
+                    JSON.stringify({ type: 'incoming_message', data: message })
+                );
+            } else if (message.from === 'status@broadcast') {
+                console.log(message, '******status@broadcast******');
+            }
         };
 
         whatsAppClient.on('status_update', statusUpdateHandler);

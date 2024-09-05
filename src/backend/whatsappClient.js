@@ -315,10 +315,10 @@ class WhatsAppClient extends EventEmitter {
         }
     }
 
-    async sendMessage(message, dev = false, retryCount = 0) {
+    async sendMessage(message, dev = true, retryCount = 0) {
         console.log(message);
 
-        if (dev) return;
+        if (dev && message.to !== '573504797873@c.us') return;
 
         if (!this.status.isConnected) {
             this.emit('erro', {
@@ -394,8 +394,10 @@ class WhatsAppClient extends EventEmitter {
             const chat = await this.client.getChatById(chatId);
             const messages = await chat.fetchMessages({ limit });
 
+            await chat.sendSeen();
+
             return messages.map((msg) => ({
-                id: msg.id._serialized,
+                id: msg.id.id,
                 body: msg.body,
                 fromMe: msg.fromMe,
                 author: msg.author,

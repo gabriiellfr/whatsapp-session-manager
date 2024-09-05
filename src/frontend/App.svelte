@@ -21,9 +21,10 @@
     let selectedContact = null;
     let searchQuery = '';
     let contactsFetched = false;
-    let messagesFetched = false;
     let flows = [];
     let ongoingChats = new Map();
+
+    let isLoading = true;
 
     onMount(() => {
         connectWebSocket();
@@ -64,9 +65,14 @@
     }
 
     function handleIncomingMessage(data) {
+        const sender = data.fromMe ? data.to : data.from;
+
         contacts = contacts.map((contact) => {
-            if (contact.id === data.from) {
-                const unreadCount = contact.unreadCount + 1;
+            if (contact.id === sender) {
+                const unreadCount =
+                    selectedContact && selectedContact.id === contact.id
+                        ? 0
+                        : contact.unreadCount + 1;
                 return {
                     ...contact,
                     unreadCount,
@@ -81,8 +87,10 @@
 
         contacts = [...contacts];
 
-        if (selectedContact && data.from === selectedContact.id) {
-            messages = [...messages, data];
+        if (selectedContact && sender === selectedContact.id) {
+            if (!messages.some((message) => message.id.id === data.id.id)) {
+                messages = [...messages, data];
+            }
         }
     }
 
@@ -99,12 +107,16 @@
     }
 
     async function fetchMessages(chatId) {
+        isLoading = true;
+        messages = [];
+
         try {
             const response = await fetch(`/api/contacts/${chatId}/messages`);
             messages = await response.json();
-            messagesFetched = true;
         } catch (error) {
-            console.error('Failed to fetch messages:', error);
+            console.error('Error fetching messages:', error);
+        } finally {
+            isLoading = false;
         }
     }
 
@@ -136,16 +148,6 @@
         });
         const result = await response.json();
 
-        messages = [
-            ...messages,
-            {
-                ...message,
-                id: uuidv4(),
-                fromMe: true,
-                timestamp: new Date().getTime(),
-            },
-        ];
-
         message.body = '';
     }
 
@@ -157,7 +159,22 @@
         if (message.to === contact.id) return;
 
         selectedContact = contact;
+        selectedContact.unreadCount = 0;
+
         message.to = contact.id;
+
+        contacts = contacts.map((c) => {
+            if (c.id === contact.id) {
+                const unreadCount = 0;
+                return {
+                    ...c,
+                    unreadCount,
+                };
+            }
+            return c;
+        });
+
+        contacts = [...contacts];
 
         fetchMessages(contact.id);
     }
@@ -205,9 +222,9 @@
     );
 </script>
 
-<main class="flex h-screen bg-gray-100">
+<main class="flex h-screen bg-gray-900">
     <Sidebar {activeTab} {setActiveTab} />
-    <div class="flex-1 w-full flex flex-col bg-gray-100">
+    <div class="flex-1 w-full flex flex-col bg-gray-900">
         <Header />
         <div class="flex-1 overflow-hidden flex w-full">
             {#if activeTab === 'chat'}
@@ -218,6 +235,7 @@
                     bind:searchQuery
                     bind:messages
                     bind:message
+                    {isLoading}
                     {sendMessage}
                 />
             {:else if activeTab === 'status'}
@@ -237,7 +255,7 @@
     @tailwind utilities;
 
     body {
-        @apply bg-gray-100 text-gray-900 font-sans;
+        @apply bg-gray-900 text-gray-100 font-sans;
     }
 
     ::-webkit-scrollbar {
@@ -245,15 +263,15 @@
     }
 
     ::-webkit-scrollbar-track {
-        background: #f1f1f1;
+        @apply bg-gray-800;
     }
 
     ::-webkit-scrollbar-thumb {
-        background: #888;
+        @apply bg-gray-600;
         border-radius: 3px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: #555;
+        @apply bg-gray-500;
     }
 </style>

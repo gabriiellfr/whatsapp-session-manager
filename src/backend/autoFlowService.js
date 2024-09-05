@@ -148,7 +148,7 @@ export class AutoFlowService {
     }
 
     async sendMessage({ to, body }) {
-        await this.whatsAppClient.sendMessage({ to, body }, true);
+        await this.whatsAppClient.sendMessage({ to, body });
     }
 
     async handleInvalidOption(message) {

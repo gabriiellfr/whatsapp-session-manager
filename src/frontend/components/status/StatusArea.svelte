@@ -19,26 +19,26 @@
 </script>
 
 <div
-    class="flex-1 p-4 sm:p-6 overflow-y-auto bg-gray-100"
+    class="flex-1 p-4 sm:p-6 overflow-y-auto bg-gray-800"
     in:fade={{ duration: 300, easing: quintOut }}
 >
     <div class="max-w-3xl mx-auto space-y-4">
-        <header class="bg-white p-4 rounded-lg shadow-sm">
-            <h1 class="text-2xl font-bold text-gray-800">
+        <header class="bg-gray-600 p-4 rounded-lg shadow-sm">
+            <h1 class="text-2xl font-bold text-gray-100">
                 WhatsApp Connection Manager
             </h1>
-            <p class="text-sm text-gray-600 mt-1">
+            <p class="text-sm text-gray-400 mt-1">
                 Monitor and control your WhatsApp connection status
             </p>
         </header>
 
         <StatusDisplay {status} />
 
-        <div class="bg-white p-4 rounded-lg shadow-sm">
+        <div class="bg-gray-600 p-4 rounded-lg shadow-sm">
             <div class="flex space-x-4">
                 <button
                     on:click={initialize}
-                    class="flex-1 px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
+                    class="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
                     disabled={isConnected}
                 >
                     <Power size={16} class="mr-2" />
@@ -46,7 +46,7 @@
                 </button>
                 <button
                     on:click={stop}
-                    class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
+                    class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
                     disabled={!isConnected}
                 >
                     <StopCircle size={16} class="mr-2" />
@@ -63,16 +63,16 @@
             <ClientInfo clientInfo={status.clientInfo} />
         {/if}
 
-        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-gray-600 rounded-lg shadow-sm overflow-hidden">
             <button
                 on:click={() => (showInfoMessages = !showInfoMessages)}
-                class="w-full px-4 py-3 flex justify-between items-center text-left focus:outline-none focus:bg-gray-50"
+                class="w-full px-4 py-3 flex justify-between items-center text-left focus:outline-none"
             >
-                <span class="font-semibold text-gray-700">Info Messages</span>
+                <span class="font-semibold text-gray-200">Info Messages</span>
                 <svelte:component
                     this={showInfoMessages ? ChevronUp : ChevronDown}
                     size={20}
-                    class="text-gray-500"
+                    class="text-gray-400"
                 />
             </button>
             {#if showInfoMessages}
