@@ -1,101 +1,118 @@
 <script>
     import { onMount, afterUpdate } from 'svelte';
-    import { fly } from 'svelte/transition';
-    import { quintOut } from 'svelte/easing';
+    import { slide } from 'svelte/transition';
     import { messagesStore } from '../../stores/messagesStore';
 
     let messageContainer;
-    let autoscroll = true;
 
     const formatTimestamp = (timestamp) => {
         const date = new Date(timestamp * 1000);
-        return date.toLocaleTimeString('pt-BR', {
-            timeZone: 'America/Sao_Paulo',
+        return date.toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
         });
     };
 
-    onMount(() => {
-        scrollToBottom();
-    });
-
-    afterUpdate(() => {
-        if (autoscroll) {
-            scrollToBottom();
-        }
-    });
-
     function scrollToBottom() {
-        messageContainer.scrollTo(0, messageContainer.scrollHeight);
+        if (messageContainer) {
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
     }
 
-    function handleScroll() {
-        const { scrollTop, scrollHeight, clientHeight } = messageContainer;
-        const atBottom = scrollHeight - scrollTop - clientHeight < 20;
-        autoscroll = atBottom;
+    $: if ($messagesStore.messages) {
+        setTimeout(scrollToBottom, 500);
     }
+
+    onMount(scrollToBottom);
+    afterUpdate(scrollToBottom);
 </script>
 
-<div
-    bind:this={messageContainer}
-    on:scroll={handleScroll}
-    class="flex-1 min-h-full overflow-y-auto bg-gray-600 p-2 sm:p-3 flex flex-col"
->
-    {#if $messagesStore.isLoading}
-        <div class="flex-1 flex items-center justify-center">
-            <p
-                class="text-gray-300 text-center bg-gray-800 rounded-lg p-3 shadow-sm text-sm"
-            >
-                Loading messages...
-            </p>
-        </div>
-    {:else if $messagesStore.messages.length > 0}
-        <div class="flex-1 flex flex-col justify-end">
-            <div class="max-w-2xl mx-auto space-y-2 w-full">
-                {#each $messagesStore.messages as msg (msg.id)}
-                    <div
-                        class={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}
-                        in:fly={{ y: 20, duration: 300, easing: quintOut }}
-                    >
-                        <div
-                            class={`max-w-[85%] rounded-lg p-2 shadow-sm
-                                    ${
-                                        msg.fromMe
-                                            ? 'bg-green-900 text-white rounded-br-none'
-                                            : 'bg-gray-700 text-gray-100 rounded-bl-none'
-                                    }`}
-                        >
-                            <pre
-                                class="whitespace-pre-wrap break-words text-sm font-sans"><code
-                                    >{msg.body}</code
-                                ></pre>
-                            <div
-                                class={`text-xs mt-1 ${msg.fromMe ? 'text-green-200' : 'text-gray-400'}`}
-                            >
-                                {formatTimestamp(msg.timestamp)}
+<div class="flex flex-col h-full bg-gray-900 text-gray-100">
+    <div
+        bind:this={messageContainer}
+        class="flex-1 overflow-y-auto p-2 space-y-2"
+    >
+        {#if $messagesStore.isLoading}
+            <div class="flex items-center justify-center h-full">
+                <div class="animate-pulse space-y-2">
+                    {#each Array(3) as _, i}
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-gray-700 rounded-full"></div>
+                            <div class="flex-1 space-y-1">
+                                <div
+                                    class="h-3 bg-gray-700 rounded w-3/4"
+                                ></div>
+                                <div
+                                    class="h-3 bg-gray-700 rounded w-1/2"
+                                ></div>
                             </div>
                         </div>
-                    </div>
-                {/each}
+                    {/each}
+                </div>
             </div>
-        </div>
-    {:else}
-        <div class="flex-1 flex items-center justify-center">
-            <p
-                class="text-gray-300 text-center bg-gray-800 rounded-lg p-3 shadow-sm text-sm"
-            >
-                No messages yet. Start a conversation!
-            </p>
-        </div>
-    {/if}
+        {:else if $messagesStore.messages.length > 0}
+            {#each $messagesStore.messages as msg (msg.id)}
+                <div
+                    class={`flex ${msg.fromMe ? 'justify-end' : 'justify-start'}`}
+                    transition:slide|local={{ duration: 200 }}
+                >
+                    <div
+                        class={`max-w-[75%] rounded-lg overflow-hidden ${
+                            msg.fromMe
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-800 text-gray-100'
+                        }`}
+                    >
+                        <div class="p-2 text-sm">
+                            <pre class="whitespace-pre-wrap break-words"><code
+                                    >{msg.body}</code
+                                ></pre>
+                        </div>
+                        <div
+                            class={`px-2 py-1 text-xs ${
+                                msg.fromMe
+                                    ? 'bg-blue-700 text-blue-200'
+                                    : 'bg-gray-700 text-gray-400'
+                            }`}
+                        >
+                            {formatTimestamp(msg.timestamp)}
+                        </div>
+                    </div>
+                </div>
+            {/each}
+        {:else}
+            <div class="flex items-center justify-center h-full">
+                <div class="text-center space-y-2">
+                    <svg
+                        class="w-12 h-12 mx-auto text-gray-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                        ></path>
+                    </svg>
+                    <h3 class="text-lg font-semibold text-gray-300">
+                        No messages yet
+                    </h3>
+                    <p class="text-sm text-gray-500">
+                        Start a conversation to see messages appear here.
+                    </p>
+                </div>
+            </div>
+        {/if}
+    </div>
 </div>
 
 <style>
-    /* Custom scrollbar styles */
     .overflow-y-auto {
         scrollbar-width: thin;
-        scrollbar-color: rgba(75, 85, 99, 0.5) transparent;
+        scrollbar-color: #4b5563 #1f2937;
     }
 
     .overflow-y-auto::-webkit-scrollbar {
@@ -103,22 +120,28 @@
     }
 
     .overflow-y-auto::-webkit-scrollbar-track {
-        background: transparent;
+        background: #1f2937;
     }
 
     .overflow-y-auto::-webkit-scrollbar-thumb {
-        background-color: rgba(75, 85, 99, 0.5);
-        border-radius: 20px;
-        border: transparent;
+        background-color: #4b5563;
+        border-radius: 10px;
     }
 
-    /* Styles for pre and code tags */
     pre {
         margin: 0;
-        font-family: inherit;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.875rem;
+        background-color: transparent;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        max-width: 100%;
     }
 
     code {
-        font-family: inherit;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.875rem;
+        line-height: 1.4;
+        color: inherit;
     }
 </style>
