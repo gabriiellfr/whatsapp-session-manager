@@ -263,11 +263,11 @@ class WhatsAppClient extends EventEmitter {
                             error: state,
                         });
                         this.updateStatus('disconnected');
-                        this.handleReconnection();
+                        this.stop();
                     }
                 } catch (error) {
                     this.handleError('heartbeat_error', error);
-                    this.handleReconnection();
+                    this.stop();
                 }
             }
             if (!this.isDestroying) {

@@ -1,15 +1,12 @@
 <script>
     import { Link } from 'svelte-routing';
     import { MessageSquare, Settings, Monitor, Activity } from 'lucide-svelte';
-    import { writable } from 'svelte/store';
     import { onMount } from 'svelte';
-
-    const currentRoute = writable(window.location.pathname);
+    import { currentRoute, updateCurrentRoute } from '../stores/routeStore';
 
     onMount(() => {
-        const updateRoute = () => currentRoute.set(window.location.pathname);
-        window.addEventListener('popstate', updateRoute);
-        return () => window.removeEventListener('popstate', updateRoute);
+        window.addEventListener('popstate', updateCurrentRoute);
+        return () => window.removeEventListener('popstate', updateCurrentRoute);
     });
 
     const tabs = [
@@ -22,7 +19,8 @@
     function handleKeydown(event, path) {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            window.location.href = path;
+            currentRoute.set(path);
+            window.history.pushState({}, '', path);
         }
     }
 </script>

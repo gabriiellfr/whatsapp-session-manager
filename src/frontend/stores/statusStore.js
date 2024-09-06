@@ -25,6 +25,13 @@ function createStatusStore() {
                 console.error('Failed to initialize:', error);
             }
         },
+        reload: async () => {
+            try {
+                await api.post('/reload');
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+            }
+        },
         logout: async () => {
             try {
                 await api.post('/logout');

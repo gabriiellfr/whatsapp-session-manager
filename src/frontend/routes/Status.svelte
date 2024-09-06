@@ -1,7 +1,13 @@
 <script>
     import { fade, slide } from 'svelte/transition';
     import { quintOut } from 'svelte/easing';
-    import { Power, StopCircle, ChevronDown, ChevronUp } from 'lucide-svelte';
+    import {
+        Power,
+        RefreshCcw,
+        StopCircle,
+        ChevronDown,
+        ChevronUp,
+    } from 'lucide-svelte';
 
     import { statusStore } from '../stores/statusStore';
 
@@ -54,20 +60,26 @@
                     Initialize
                 </button>
                 <button
-                    on:click={statusStore.logout}
+                    on:click={statusStore.reload}
                     class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
-                    disabled={!isConnected}
                 >
-                    <StopCircle size={16} class="mr-2" />
-                    Logout
+                    <RefreshCcw size={16} class="mr-2" />
+                    Reload
                 </button>
                 <button
                     on:click={statusStore.stop}
                     class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
-                    disabled={!isConnected}
                 >
                     <StopCircle size={16} class="mr-2" />
                     Stop
+                </button>
+                <button
+                    on:click={statusStore.logout}
+                    class="w-full sm:w-auto px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors duration-200 font-semibold flex items-center justify-center text-sm"
+                    disabled={!isConnected}
+                >
+                    <StopCircle size={16} class="mr-2" />
+                    Logout
                 </button>
             </div>
         </div>

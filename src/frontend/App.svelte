@@ -3,8 +3,6 @@
     import { onMount } from 'svelte';
 
     import { websocketStore } from './stores/websocketStore';
-    import { contactsStore } from './stores/contactsStore';
-    import { flowsStore } from './stores/flowsStore';
 
     import Header from './components/Header.svelte';
     import Sidebar from './components/Sidebar.svelte';
@@ -17,7 +15,6 @@
 
     onMount(() => {
         websocketStore.connect();
-        flowsStore.fetchFlows();
     });
 </script>
 

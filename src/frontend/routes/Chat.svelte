@@ -1,11 +1,14 @@
 <script>
     import { onMount } from 'svelte';
-    import { fade } from 'svelte/transition';
+    import { fade, fly } from 'svelte/transition';
     import { quintOut } from 'svelte/easing';
-    import { MessageSquare } from 'lucide-svelte';
+    import { MessageSquare, AlertTriangle, ArrowRight } from 'lucide-svelte';
+    import { Link } from 'svelte-routing';
 
     import { contactsStore } from '../stores/contactsStore';
     import { messagesStore } from '../stores/messagesStore';
+    import { statusStore } from '../stores/statusStore';
+    import { currentRoute } from '../stores/routeStore';
 
     import ContactList from '../components/chat/ContactList.svelte';
     import ChatHeader from '../components/chat/ChatHeader.svelte';
@@ -15,6 +18,7 @@
     let searchQuery = '';
     let message = { to: '', body: '' };
     let previousContactId = null;
+    let hasInitiallyFetchedContacts = false;
 
     $: filteredContacts = $contactsStore.contacts.filter((contact) =>
         contact.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -29,6 +33,14 @@
         previousContactId = $contactsStore.selectedContact.id;
     }
 
+    $: if (
+        $statusStore.status.status === 'ready' &&
+        !hasInitiallyFetchedContacts
+    ) {
+        contactsStore.fetchContacts();
+        hasInitiallyFetchedContacts = true;
+    }
+
     function selectContact(contact) {
         contactsStore.selectContact(contact);
     }
@@ -40,12 +52,46 @@
         }
     }
 
+    function goToStatusPage() {
+        currentRoute.set('/status');
+    }
+
     onMount(() => {
-        contactsStore.fetchContacts();
+        if ($statusStore.status.status === 'ready') {
+            contactsStore.fetchContacts();
+            hasInitiallyFetchedContacts = true;
+        }
     });
 </script>
 
-<div class="flex h-full w-full bg-gray-900">
+<div class="flex h-full w-full bg-gray-900 relative">
+    {#if $statusStore.status.status !== 'ready'}
+        <div
+            class="absolute inset-0 bg-gray-900 bg-opacity-90 z-50 flex items-center justify-center"
+            in:fade={{ duration: 300, easing: quintOut }}
+            out:fade={{ duration: 300, easing: quintOut }}
+        >
+            <div class="text-center p-8 bg-gray-800 rounded-lg shadow-lg">
+                <AlertTriangle size={64} class="text-yellow-500 mx-auto mb-4" />
+                <h2 class="text-2xl font-bold text-white mb-4">
+                    Client Not Ready
+                </h2>
+                <p class="text-gray-300 mb-6">
+                    The chat service is currently not ready. Please check the
+                    status page for more information.
+                </p>
+                <Link
+                    to="/status"
+                    class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg transition-colors hover:bg-blue-700"
+                    on:click={goToStatusPage}
+                >
+                    Go to Status Page
+                    <ArrowRight class="ml-2" size={20} />
+                </Link>
+            </div>
+        </div>
+    {/if}
+
     <div class="w-1/3 border-r border-gray-700 flex flex-col bg-gray-800">
         <ContactList {filteredContacts} {selectContact} bind:searchQuery />
     </div>

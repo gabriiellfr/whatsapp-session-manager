@@ -14,6 +14,19 @@ export default function (whatsAppClient, autoFlowService) {
         }
     });
 
+    router.post('/reload', async (req, res) => {
+        try {
+            await whatsAppClient.stop();
+
+            await whatsAppClient.initialize();
+            await autoFlowService.initialize();
+            res.json({ message: 'Services reloaded successfully' });
+        } catch (error) {
+            console.error('Error starting services:', error);
+            res.status(500).json({ error: error.message });
+        }
+    });
+
     router.post('/stop', async (req, res) => {
         try {
             await whatsAppClient.stop();
